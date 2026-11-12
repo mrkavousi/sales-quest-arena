@@ -5,7 +5,7 @@ import { GAME_CONFIG } from '../game/config';
 import { CATEGORIES, CUSTOMER_VISIT_ID, DIFFICULTY } from '../game/missions';
 import { createInitialProgress, ensureDaily, getMissionViews } from '../game/progress';
 import { apiErrorKey, definitelyNotCompleted } from './errors';
-import { demoLogin, demoLogout, GameApiError, getBootstrap, getDemoUsers, postCompletion, putDraft, SUPPORTED_CONTENT_VERSION } from './game';
+import { demoLogin, demoLogout, GameApiError, getBootstrap, getDemoUsers, isSignOutAlreadyEnded, postCompletion, putDraft, SUPPORTED_CONTENT_VERSION } from './game';
 
 const today = '2026-11-12';
 const now = new Date(`${today}T10:00:00Z`);
@@ -177,5 +177,14 @@ describe('same-origin game BFF client', () => {
     expect(await demoLogout('csrf-token')).toBe(false);
     vi.stubGlobal('fetch', vi.fn(async () => asJson({ error: { code: 'Csrf mismatch', message: 'no' } }, 403)));
     await expect(demoLogout('csrf-token')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('treats only a 401 as an already-ended sign-out, never a 403 CSRF failure', () => {
+    expect(isSignOutAlreadyEnded(new GameApiError(401, 'UNAUTHORIZED', 'gone'))).toBe(true);
+    // A 403 leaves the HttpOnly cookie alive, so claiming success would be a lie.
+    expect(isSignOutAlreadyEnded(new GameApiError(403, 'Csrf mismatch', 'no'))).toBe(false);
+    expect(isSignOutAlreadyEnded(new GameApiError(500, 'INTERNAL', 'boom'))).toBe(false);
+    expect(isSignOutAlreadyEnded(new TypeError('network down'))).toBe(false);
+    expect(isSignOutAlreadyEnded(null)).toBe(false);
   });
 });

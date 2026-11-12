@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react';
  * The route lives in memory and is mirrored to the URL hash on a best-effort basis,
  * so the game keeps working inside sandboxed embeds where URL updates are restricted.
  */
-export type RouteName = 'arena' | 'missions' | 'history' | 'profile' | 'play' | 'result';
+export type RouteName = 'arena' | 'missions' | 'store' | 'history' | 'profile' | 'play' | 'result' | 'result-special';
 
 export interface Route {
   name: RouteName;
@@ -15,10 +15,12 @@ export interface Route {
 const NAMES: Record<string, RouteName> = {
   '': 'arena',
   missions: 'missions',
+  store: 'store',
   history: 'history',
   profile: 'profile',
   play: 'play',
   result: 'result',
+  'result-special': 'result-special',
 };
 
 export function parseRoute(hash: string): Route {

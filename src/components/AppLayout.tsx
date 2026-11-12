@@ -8,6 +8,7 @@ import { Icon, type IconName } from './ui/Icon';
 const TABS: { route: RouteName; href: string; label: MessageKey; icon: IconName }[] = [
   { route: 'arena', href: '#/', label: 'nav.arena', icon: 'shield' },
   { route: 'missions', href: '#/missions', label: 'nav.missions', icon: 'target' },
+  { route: 'store', href: '#/store', label: 'nav.store', icon: 'store' },
   { route: 'history', href: '#/history', label: 'nav.history', icon: 'scroll' },
   { route: 'profile', href: '#/profile', label: 'nav.profile', icon: 'user' },
 ];

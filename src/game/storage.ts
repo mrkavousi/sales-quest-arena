@@ -1,5 +1,6 @@
 import { createInitialProgress, AVATAR_IDS } from './progress';
-import type { PlayerProgress } from './types';
+import { STORE_OFFERS } from './store';
+import type { PlayerProgress, StoreState } from './types';
 
 /**
  * Device-only persistence. Server mode uses a separate async BFF client and
@@ -25,6 +26,17 @@ export function isStorageAvailable(): boolean {
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const toInt = (v: unknown, fallback = 0) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : fallback);
+
+/** Keeps only offers this build knows about, de-duplicated, so a save never widens access. */
+export function normalizeStore(raw: unknown): StoreState {
+  const source = isObject(raw) && Array.isArray(raw.purchased) ? raw.purchased : [];
+  const known = new Set(STORE_OFFERS.map((offer) => offer.id));
+  const purchased: string[] = [];
+  for (const value of source) {
+    if (typeof value === 'string' && known.has(value) && !purchased.includes(value)) purchased.push(value);
+  }
+  return { purchased };
+}
 
 /** Defensive merge so a damaged or older save can never crash the game. */
 export function normalizeProgress(raw: unknown): PlayerProgress | null {
@@ -53,6 +65,8 @@ export function normalizeProgress(raw: unknown): PlayerProgress | null {
     daily: isObject(raw.daily) ? (raw.daily as unknown as PlayerProgress['daily']) : null,
     achievements: isObject(raw.achievements) ? (raw.achievements as PlayerProgress['achievements']) : {},
     history: Array.isArray(raw.history) ? (raw.history.filter(isObject) as unknown as PlayerProgress['history']) : [],
+    // Saves written before the demo store simply have no store section.
+    store: normalizeStore(raw.store),
   };
 }
 
@@ -61,7 +75,13 @@ export function loadProgress(): { progress: PlayerProgress | null; status: LoadS
   try {
     const text = window.localStorage.getItem(STORAGE_KEY);
     if (text === null) return { progress: null, status: 'empty' };
-    const progress = normalizeProgress(JSON.parse(text));
+    const parsed = JSON.parse(text);
+    // Older builds only understand `version: 1`; a newer document is left untouched
+    // (never reset) so a downgraded tab cannot silently wipe a newer save.
+    if (isObject(parsed) && typeof parsed.version === 'number' && parsed.version !== 1) {
+      return { progress: null, status: 'corrupt' };
+    }
+    const progress = normalizeProgress(parsed);
     return progress ? { progress, status: 'loaded' } : { progress: null, status: 'corrupt' };
   } catch {
     return { progress: null, status: 'corrupt' };

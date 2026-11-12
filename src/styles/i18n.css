@@ -122,7 +122,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .language-switcher button[lang='fa'] { font-family: 'Vazirmatn Variable', sans-serif; }
 .welcome__top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .pause__language { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 0 0 6px; color: var(--ink-2); font-size: 14px; font-weight: 900; }
-.nav__tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.nav__tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .nav__tab { min-width: 0; }
 .nav__language { color: var(--primary); }
 .nav__language .nav__label { white-space: nowrap; }

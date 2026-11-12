@@ -276,3 +276,12 @@ export async function demoLogout(csrf: string): Promise<boolean> {
   const data = await jsonRequest<unknown>(`${ROOT}/logout`, { method: 'POST', headers: { 'X-CSRF-Token': csrf } });
   return object(data) && data.logged_out === true;
 }
+
+/**
+ * A sign-out is "already done" only on a 401: the session cookie is gone.
+ * A 403 is a CSRF failure, so the cookie may still be live and the caller must
+ * report a failure rather than pretend the user was signed out.
+ */
+export function isSignOutAlreadyEnded(error: unknown): boolean {
+  return error instanceof GameApiError && error.status === 401;
+}

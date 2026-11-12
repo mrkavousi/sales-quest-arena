@@ -56,9 +56,10 @@
 /* ---------- Arena layout ---------- */
 .arena__grid { display: grid; gap: 16px; padding: 16px; }
 @media (min-width: 960px) {
-  .arena__grid { padding: 20px 0 0; gap: 20px; grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: 'map daily' 'map progress'; grid-template-rows: auto 1fr; align-items: start; }
+  .arena__grid { padding: 20px 0 0; gap: 20px; grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: 'map daily' 'map store' 'map progress'; grid-template-rows: auto auto 1fr; align-items: start; }
   .arena__daily { grid-area: daily; }
   .arena__map { grid-area: map; }
+  .arena__store { grid-area: store; }
   .arena__progress { grid-area: progress; position: sticky; top: 20px; }
 }
 

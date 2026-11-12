@@ -17,6 +17,8 @@ export function createInitialProgress(now: Date = new Date()): PlayerProgress {
     daily: null,
     achievements: {},
     history: [],
+    // Older saves predate the demo store; an empty list means nothing bought.
+    store: { purchased: [] },
   };
 }
 

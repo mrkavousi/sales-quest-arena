@@ -11,6 +11,7 @@ import './styles/play.css';
 import './styles/i18n.css';
 import './styles/pwa.css';
 import './styles/connection.css';
+import './styles/store.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

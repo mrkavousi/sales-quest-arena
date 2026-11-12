@@ -149,6 +149,15 @@ export interface HistoryEntry {
   achievementsUnlocked: string[];
 }
 
+/**
+ * Device-only demo store state. It is a local convenience record, never a
+ * server-owned value: server mode neither reads nor writes it.
+ */
+export interface StoreState {
+  /** Offer ids bought on this device, in purchase order. */
+  purchased: string[];
+}
+
 export interface DailyChallengeState {
   /** YYYY-MM-DD: local day in device mode, server UTC date_key in server mode. */
   date: string;
@@ -178,4 +187,9 @@ export interface PlayerProgress {
   achievements: Record<string, string>;
   /** Newest first. */
   history: HistoryEntry[];
+  /**
+   * Demo store purchases. Optional so older saves and server projections that
+   * never carried a store section keep working; local code defaults it.
+   */
+  store?: StoreState;
 }

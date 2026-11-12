@@ -5,11 +5,26 @@ import type { GameConfig } from '../game/config';
 import type { LevelInfo } from '../game/levels';
 import type { CategoryMeta } from '../game/missions';
 import type { PlayerStats } from '../game/progress';
+import type { PurchaseResult, StoreOffer } from '../game/store';
 import type { Answers, AvatarId, HistoryEntry, MissionCategory, MissionDifficulty, MissionView, PlayerProgress } from '../game/types';
 
 export type GameMode = 'local' | 'server';
 /** In server mode, saved means acknowledged by the BFF, not stored on the device. */
 export type PersistenceState = 'saved' | 'saving' | 'unavailable' | 'error';
+
+export type StoreStatus = 'available' | 'server-unavailable';
+
+export interface StoreView {
+  /** `server-unavailable` means the BFF has no integrated store yet. */
+  status: StoreStatus;
+  offers: readonly StoreOffer[];
+  /** Offer ids already bought on this device (always empty in server mode). */
+  purchased: string[];
+}
+
+export type PurchaseOutcome =
+  | { ok: true; result: PurchaseResult }
+  | { ok: false; error: 'unknown_offer' | 'already_purchased' | 'insufficient_coins' | 'unavailable' | 'save_failed' };
 
 export interface ToastMessage {
   id: number;
@@ -48,6 +63,9 @@ export interface GameContextValue {
   discardDraft: (missionId: string, stepIndex: number, answers: Answers) => Promise<boolean>;
   finishMission: (missionId: string, answers: Answers) => Promise<HistoryEntry | null>;
   resetProgress: () => void;
+  /** Demo store: device-only purchases, or an explicit "not connected" in server mode. */
+  store: StoreView;
+  buyOffer: (offerId: string) => Promise<PurchaseOutcome>;
   lastResult: HistoryEntry | null;
   refresh: () => Promise<boolean>;
   loadHistory: (cursor?: string) => Promise<HistoryPage | null>;
