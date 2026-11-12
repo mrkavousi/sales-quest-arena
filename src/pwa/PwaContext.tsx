@@ -20,8 +20,13 @@ function isStandalone(): boolean {
 
 function supportsPwa(): boolean {
   // The file:// single-file build and the dev server deliberately have no worker/manifest.
-  return import.meta.env.PROD && import.meta.env.MODE !== 'standalone' &&
-    window.isSecureContext && 'serviceWorker' in navigator;
+  if (!import.meta.env.PROD || import.meta.env.MODE === 'standalone' || !window.isSecureContext) return false;
+  try {
+    // The getter can throw in sandboxed iframes or browsers that block service workers.
+    return 'serviceWorker' in navigator && !!navigator.serviceWorker;
+  } catch {
+    return false;
+  }
 }
 
 interface PwaContextValue {
@@ -103,15 +108,19 @@ export function PwaProvider({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('online', onOnline);
 
-    void serviceWorker.register(new URL('./sw.js', document.baseURI), { updateViaCache: 'none' }).then((result) => {
-      if (disposed) return;
-      registration = result;
-      registrationRef.current = result;
-      lastCheckRef.current = Date.now();
-      if (result.waiting && result.active) setUpdateAvailable(true);
-      result.addEventListener('updatefound', onUpdateFound);
-      observe(result.installing);
-    }).catch(() => { /* The game still runs online if service workers are blocked. */ });
+    try {
+      void serviceWorker.register(new URL('./sw.js', document.baseURI), { updateViaCache: 'none' }).then((result) => {
+        if (disposed) return;
+        registration = result;
+        registrationRef.current = result;
+        lastCheckRef.current = Date.now();
+        if (result.waiting && result.active) setUpdateAvailable(true);
+        result.addEventListener('updatefound', onUpdateFound);
+        observe(result.installing);
+      }).catch(() => { /* The game still runs online if service workers are blocked. */ });
+    } catch {
+      // Some browsers throw synchronously instead of rejecting the registration promise.
+    }
 
     return () => {
       disposed = true;

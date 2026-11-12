@@ -27,8 +27,10 @@ const types = {
 
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
-  let name = decodeURIComponent(pathname).replace(/^\/+/, '') || 'index.html';
-  if (name.endsWith('/')) name += 'index.html';
+  let name = decodeURIComponent(pathname).replace(/^\/+/, '');
+  // Serve the exact same production build at both the root and a subpath.
+  if (name.startsWith('game/')) name = name.slice('game/'.length);
+  if (!name || name.endsWith('/')) name += 'index.html';
   if (name.includes('..')) { res.writeHead(400).end(); return; }
   res.setHeader('Vary', 'Origin');
   res.setHeader('Cache-Control', 'no-store');
@@ -198,6 +200,53 @@ try {
   assert.equal(await installedPage.locator('.install-entry').count(), 0);
   await installedIos.close();
   console.log('  ✓ iOS home-screen guidance and standalone detection');
+
+  // Relative manifest, assets, and worker URLs also work below an origin's root.
+  const nested = await browser.newContext({ ...devices['Pixel 7'], locale: 'en-US' });
+  const nestedPage = await nested.newPage();
+  observe(nestedPage);
+  const nestedUrl = `${url}game/`;
+  await nestedPage.goto(nestedUrl);
+  await nestedPage.waitForSelector('.welcome__card');
+  await waitForController(nestedPage);
+  assert.equal(await nestedPage.evaluate(async () => (await navigator.serviceWorker.getRegistration()).scope), nestedUrl);
+  const nestedCdp = await nested.newCDPSession(nestedPage);
+  const nestedManifest = await nestedCdp.send('Page.getAppManifest');
+  assert.deepEqual(nestedManifest.errors, []);
+  assert.equal(nestedManifest.manifest.startUrl, nestedUrl);
+  assert.equal(nestedManifest.manifest.scope, nestedUrl);
+  assert.deepEqual((await nestedCdp.send('Page.getInstallabilityErrors')).installabilityErrors, []);
+  await nested.setOffline(true);
+  assert.equal((await nestedPage.reload()).fromServiceWorker(), true);
+  await nestedPage.waitForSelector('.welcome__card');
+  await nestedPage.locator('.input').fill('Taylor');
+  await nestedPage.getByRole('button', { name: 'Enter the arena' }).click();
+  await nestedPage.waitForSelector('.map');
+  await nestedPage.reload();
+  await nestedPage.waitForSelector('.map');
+  assert.equal((await progress(nestedPage)).player.name, 'Taylor');
+  await nested.close();
+  console.log('  ✓ Subpath installation and offline play');
+
+  // Blocking worker access or registration must not break the regular online game.
+  for (const block of ['getter', 'register']) {
+    const blocked = await browser.newContext({ ...devices['Pixel 7'], locale: 'en-US' });
+    await blocked.addInitScript((method) => {
+      const denied = () => { throw new DOMException('Blocked by browser', 'SecurityError'); };
+      if (method === 'getter') Object.defineProperty(navigator, 'serviceWorker', { configurable: true, get: denied });
+      else Object.defineProperty(navigator.serviceWorker, 'register', { configurable: true, value: denied });
+    }, block);
+    const blockedPage = await blocked.newPage();
+    observe(blockedPage);
+    await blockedPage.goto(url);
+    await blockedPage.waitForSelector('.welcome__card');
+    await blockedPage.locator('.input').fill('Jordan');
+    await blockedPage.getByRole('button', { name: 'Enter the arena' }).click();
+    await blockedPage.waitForSelector('.map');
+    assert.equal((await progress(blockedPage)).player.name, 'Jordan');
+    await blocked.close();
+  }
+  console.log('  ✓ Online game remains usable when service workers are blocked');
 
   // A new version waits during a mission, then offers an explicit update.
   const updateContext = await browser.newContext({ ...devices['Pixel 7'], locale: 'en-US', reducedMotion: 'reduce' });
