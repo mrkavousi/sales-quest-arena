@@ -1,16 +1,19 @@
 import type { ReactNode } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
+import type { MessageKey } from '../i18n/messages';
 import type { RouteName } from '../router';
 import { useGame } from '../state/GameContext';
 import { Icon, type IconName } from './ui/Icon';
 
-const TABS: { route: RouteName; href: string; label: string; icon: IconName }[] = [
-  { route: 'arena', href: '#/', label: 'Arena', icon: 'shield' },
-  { route: 'missions', href: '#/missions', label: 'Missions', icon: 'target' },
-  { route: 'history', href: '#/history', label: 'History', icon: 'scroll' },
-  { route: 'profile', href: '#/profile', label: 'Profile', icon: 'user' },
+const TABS: { route: RouteName; href: string; label: MessageKey; icon: IconName }[] = [
+  { route: 'arena', href: '#/', label: 'nav.arena', icon: 'shield' },
+  { route: 'missions', href: '#/missions', label: 'nav.missions', icon: 'target' },
+  { route: 'history', href: '#/history', label: 'nav.history', icon: 'scroll' },
+  { route: 'profile', href: '#/profile', label: 'nav.profile', icon: 'user' },
 ];
 
 export function Logo() {
+  const { t } = useLanguage();
   return (
     <span className="logo">
       <svg width="40" height="40" viewBox="0 0 64 64" aria-hidden="true">
@@ -19,8 +22,8 @@ export function Logo() {
         <path d="M32 8l6.6 13.4 14.8 2.2-10.7 10.4 2.5 14.7L32 41.8l-13.2 6.9 2.5-14.7L10.6 23.6l14.8-2.2z" fill="#5b3df5" />
       </svg>
       <span className="logo__text">
-        <b>Sales Quest</b>
-        <i>Arena</i>
+        <b>{t('logo.name')}</b>
+        <i>{t('logo.arena')}</i>
       </span>
     </span>
   );
@@ -28,21 +31,22 @@ export function Logo() {
 
 export function StorageBanner() {
   const { persistence } = useGame();
+  const { t } = useLanguage();
   if (persistence === 'saved') return null;
   return (
     <div className="storage-banner" role="alert">
-      <b>Progress is not being saved.</b>{' '}
-      {persistence === 'unavailable'
-        ? 'This browser (or embedded preview) blocks local storage, so your progress will be lost when the page closes. Open the game in a normal browser tab to keep it.'
-        : 'The last save failed — device storage may be full. Your progress will be lost when the page closes.'}
+      <b>{t('storage.warning')}</b>{' '}
+      {t(persistence === 'unavailable' ? 'storage.unavailable' : 'storage.error')}
     </div>
   );
 }
 
 export function AppLayout({ route, children }: { route: RouteName; children: ReactNode }) {
+  const { language, setLanguage, t } = useLanguage();
+  const nextLanguage = language === 'en' ? 'fa' : 'en';
   return (
     <div className="shell">
-      <nav className="nav" aria-label="Main">
+      <nav className="nav" aria-label={t('nav.main')}>
         <div className="nav__brand">
           <Logo />
         </div>
@@ -52,9 +56,20 @@ export function AppLayout({ route, children }: { route: RouteName; children: Rea
               <span className="nav__icon">
                 <Icon name={tab.icon} size={24} />
               </span>
-              <span className="nav__label">{tab.label}</span>
+              <span className="nav__label">{t(tab.label)}</span>
             </a>
           ))}
+          <button
+            type="button"
+            className="nav__tab nav__language"
+            onClick={() => setLanguage(nextLanguage)}
+            aria-label={t(nextLanguage === 'fa' ? 'language.switchToFa' : 'language.switchToEn')}
+          >
+            <span className="nav__icon"><Icon name="globe" size={24} /></span>
+            <span className="nav__label" lang={nextLanguage} dir={nextLanguage === 'fa' ? 'rtl' : 'ltr'}>
+              {nextLanguage === 'fa' ? 'فارسی' : 'English'}
+            </span>
+          </button>
         </div>
       </nav>
       <main className="shell__main">

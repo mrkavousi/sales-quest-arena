@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Icon } from './Icon';
 
 interface SheetProps {
@@ -14,6 +15,7 @@ interface SheetProps {
 
 /** Bottom sheet on phones, centered dialog on larger screens. */
 export function Sheet({ open, onClose, label, children, hideClose = false, size = 'md' }: SheetProps) {
+  const { t } = useLanguage();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -33,7 +35,7 @@ export function Sheet({ open, onClose, label, children, hideClose = false, size 
       <div className={`sheet__panel sheet__panel--${size}`}>
         <span className="sheet__grip" aria-hidden="true" />
         {!hideClose && (
-          <button className="iconbtn sheet__close" onClick={onClose} aria-label="Close">
+          <button className="iconbtn sheet__close" onClick={onClose} aria-label={t('common.close')}>
             <Icon name="close" size={20} />
           </button>
         )}

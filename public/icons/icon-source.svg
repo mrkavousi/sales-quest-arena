@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7055ff"/>
+      <stop offset="1" stop-color="#3b1fa3"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffe47a"/>
+      <stop offset="1" stop-color="#ffc93c"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#background)" d="M0 0h512v512H0z"/>
+  <circle cx="256" cy="245" r="208" fill="#fff" opacity=".07"/>
+  <rect x="91" y="101" width="330" height="330" rx="101" fill="#261369" opacity=".25"/>
+  <rect x="91" y="82" width="330" height="330" rx="101" fill="url(#badge)"/>
+  <path d="M256 134l35.2 71.3 78.7 11.4-56.9 55.6 13.4 78.4-70.4-37-70.4 37 13.4-78.4-56.9-55.6 78.7-11.4z" fill="#4326c9" transform="translate(0 8)"/>
+  <path d="M256 134l35.2 71.3 78.7 11.4-56.9 55.6 13.4 78.4-70.4-37-70.4 37 13.4-78.4-56.9-55.6 78.7-11.4z" fill="#5b3df5"/>
+  <path d="M220 203l17-35" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".4"/>
+</svg>

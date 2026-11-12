@@ -1,0 +1,62 @@
+/* Install entry follows the same playful card language as the rest of the game. */
+.install-entry {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #d8cffb;
+  border-radius: 20px;
+  background: #f4f0ff;
+  text-align: start;
+  color: var(--ink);
+  transition: border-color 0.15s, transform 0.12s;
+}
+@media (hover: hover) { .install-entry:hover { border-color: var(--primary); transform: translateY(-2px); } }
+.install-entry:active { transform: translateY(1px); }
+.install-entry__icon, .install-guide__icon, .pwa-update__icon {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--primary);
+  box-shadow: 0 3px 0 var(--primary-dark);
+}
+.install-entry__icon { width: 46px; height: 46px; border-radius: 15px; }
+.install-entry__text { min-width: 0; display: grid; gap: 2px; }
+.install-entry__text b { font-size: 15px; font-weight: 900; }
+.install-entry__text > span { font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+.install-entry__arrow { color: var(--primary); }
+.profile .install-entry { margin-top: 16px; }
+.profile .install-entry + .panel { margin-top: 16px; }
+
+.install-guide { display: grid; justify-items: center; gap: 12px; padding: 34px 24px 24px; text-align: center; }
+.install-guide__icon { width: 58px; height: 58px; border-radius: 20px; }
+.install-guide h2 { font-size: 23px; }
+.install-guide p { color: var(--ink-2); }
+.install-guide__offline { padding: 10px 12px; border-radius: 14px; background: var(--green-soft); font-size: 13px; }
+
+.pwa-update {
+  position: fixed;
+  z-index: 65;
+  inset-inline: 16px;
+  top: calc(12px + var(--safe-top));
+  margin-inline: auto;
+  max-width: 440px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--shadow-lg);
+}
+.pwa-update__icon { flex: none; width: 42px; height: 42px; border-radius: 14px; }
+.pwa-update__content { min-width: 0; flex: 1; }
+.pwa-update__content strong { display: block; font-size: 15px; font-weight: 900; }
+.pwa-update__content p { font-size: 13px; color: var(--ink-2); }
+.pwa-update__content .pwa-update__warning { margin-top: 5px; color: #9d4000; }
+.pwa-update__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pwa-update__later { padding: 9px 12px; border-radius: 12px; color: var(--ink-2); font-size: 13px; font-weight: 900; }
+.pwa-update__later:hover { background: var(--primary-soft); }

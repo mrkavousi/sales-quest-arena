@@ -9,12 +9,51 @@ It is a **game** that happens to record real-world sales activities — not a CR
 npm install
 npm start          # production build + server on http://localhost:4173
 npm run dev        # dev server with hot reload on http://localhost:5173
-npm test           # game-engine unit tests (rewards, levels, streak, unlocks, save format)
+npm test           # game-engine and localization unit tests
 npm run build:standalone   # one self-contained file: standalone/index.html
+
+# With npm start running in another terminal:
+npx playwright install chromium
+npm run test:e2e    # English and Persian playthroughs, plus PWA checks
+npm run test:pwa    # builds and tests installability, offline play and updates
 ```
 
 Stack: React 18 + TypeScript + Vite. No UI kit, no animation library, no 3D engine —
 animations are CSS plus a ~100-line canvas confetti. Illustrations are original inline SVG.
+
+## Deploy to Vercel
+
+Import the GitHub repository into a Vercel project and deploy the branch containing
+these changes. `vercel.json` configures the Vite build (`npm ci`, `npm run build`,
+output directory `dist`); no environment variables or backend are required. The app
+uses hash-based navigation, so it does not need a catch-all rewrite. Vercel normally
+uses the configured production branch for the production URL and other branches for
+preview deployments.
+
+Game progress and the language preference are stored in the browser, scoped to the
+site's origin. They do not automatically transfer between localhost, a Vercel preview
+URL, and the production URL, or between different devices.
+
+## Install and play offline
+
+The HTTPS deployment is an installable progressive web app (PWA); no app store or APK
+is required. On Android, open the production URL in Chrome and tap **Install the game**,
+or use Chrome's three-dot menu → **Install app / Add to Home screen**. On iPhone/iPad,
+open it in Safari, tap **Share** → **Add to Home Screen** → **Add**. Browser and OS
+versions can use slightly different menu labels. Installation is available on HTTPS
+or localhost, not when opening the standalone HTML file directly.
+
+After the first online visit completes and the service worker has cached the app,
+the game, translations, fonts and icons work offline. Progress stays on the device;
+clearing site/app storage or uninstalling may delete it, and some platforms keep an
+installed app's storage separate from a browser tab. There is no cloud sync or backup.
+
+A new release is downloaded in the background and waits until the player chooses to
+update or closes the old app. The update notice is postponed during a mission. The
+regular Vite build generates `dist/sw.js` with a content-based revision and precaches
+the built assets; the single-file build remains self-contained and does not register a
+service worker. `npm run test:pwa` checks installability and offline behavior using
+Chromium and simulates Android/iOS install flows and a safe update.
 
 ## What is in version 1
 
@@ -55,6 +94,10 @@ src/
     completeMission.ts  (progress, mission, answers, time) → new progress + history entry
     storage.ts          Persistence adapter (localStorage, verified writes)
     engine.test.ts      Unit tests
+  i18n/                 English/Persian UI strings, translated game content and locale helpers
+    LanguageContext.tsx Language preference, document language and direction
+    locale.test.ts      Translation coverage, formatting and save-compatibility tests
+  pwa/PwaContext.tsx    Install prompt, service-worker registration and update handling
   state/GameContext.tsx Single store; one `commit()` path that updates memory and saves
   router.ts             Tiny hash router
   components/           PlayerHeader, MissionMap, MissionCard, MissionDetail, DailyChallenge,
@@ -76,6 +119,19 @@ Every write is read back and verified. If the browser blocks storage (private mo
 sandboxed embeds) the game still runs and shows a clear "progress is not being saved"
 banner instead of pretending.
 
+### Languages
+
+English and Persian are available from the welcome screen, the navigation bar, the
+profile, or the pause dialog. The first supported browser language is used initially
+(with English as the fallback); an explicit selection is stored separately under
+`sales-quest-arena:language:v1` and remains selected even when game progress is reset.
+If storage is blocked, the selection lasts for the current session only.
+
+Persian uses a bundled Vazirmatn font, right-to-left layouts, Persian digits and the
+Persian calendar for history dates. Mission and reward translations are looked up by
+stable IDs, so switching languages does not change saved progress, answers, or the
+player's own notes. Older English saves continue to work.
+
 ## Extending it
 
 **Add a mission** — append an object to `MISSIONS` in `src/game/missions.ts`:
@@ -95,10 +151,13 @@ banner instead of pretending.
 }
 ```
 
-It appears on the map and in the list, and is playable, with no UI changes.
+It appears on the map and in the list, and is playable, with no UI changes. Add its
+Persian title, description, and step/option copy keyed by ID to `PERSIAN_MISSIONS` in
+`src/i18n/content.ts`. The localization tests check that built-in content is complete.
+Unknown content falls back to its original text rather than affecting gameplay.
 
-**Add a reward rule** — append to `REWARD_RULES` in `src/game/rewards.ts`.
-**Add a badge** — append to `ACHIEVEMENTS` in `src/game/achievements.ts`.
+**Add a reward rule** — append to `REWARD_RULES` in `src/game/rewards.ts` and translate its ID in `PERSIAN_REWARDS`.
+**Add a badge** — append to `ACHIEVEMENTS` in `src/game/achievements.ts` and translate its ID in `PERSIAN_ACHIEVEMENTS`.
 **Add a step type** (photo, number, location…) — add it to the `MissionStep` union in
 `types.ts` and a view in `components/play/MissionStep.tsx`.
 
@@ -110,4 +169,4 @@ It appears on the map and in the list, and is playable, with no UI changes.
 - Team competitions and leaderboards
 - Admin mission configuration (serve `MISSIONS` and `GAME_CONFIG` from an API)
 - A coin shop — coins are earned and stored, but there is nothing to spend them on yet
-- Sound effects, localization / right-to-left layouts, more worlds on the map
+- Sound effects and more worlds on the map

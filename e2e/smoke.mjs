@@ -3,14 +3,15 @@
  * and checks rewards, level-up, statuses, history and persistence across reloads.
  *
  *   npm start                       # terminal 1 (serves http://localhost:4173)
- *   npm i -D playwright && npx playwright install chromium
+ *   npx playwright install chromium # once
  *   node e2e/smoke.mjs              # terminal 2
+ *   Set SQA_CHROMIUM_PATH to use an already-installed Chromium executable.
  */
 import { chromium } from 'playwright';
 const URL = process.env.SQA_URL ?? 'http://localhost:4173/';
 const errors = [];
 const log = (...a) => console.log(...a);
-const browser = await chromium.launch();
+const browser = await chromium.launch({ executablePath: process.env.SQA_CHROMIUM_PATH || undefined });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 const page = await ctx.newPage();
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });

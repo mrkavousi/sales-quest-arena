@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { MissionCard } from '../components/MissionCard';
 import { MissionDetail } from '../components/MissionDetail';
 import { CATEGORIES } from '../game/missions';
+import { categoryLabel } from '../i18n/content';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { MissionCategory, MissionStatus } from '../game/types';
 import { useGame } from '../state/GameContext';
 
@@ -10,6 +12,7 @@ const ORDER: Record<MissionStatus, number> = { in_progress: 0, available: 1, com
 
 export function MissionsPage() {
   const { missions } = useGame();
+  const { language, t } = useLanguage();
   const [filter, setFilter] = useState<Filter>('all');
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -22,20 +25,20 @@ export function MissionsPage() {
   return (
     <div className="pagebody">
       <header className="pagehead">
-        <h1>Missions</h1>
+        <h1>{t('nav.missions')}</h1>
         <p>
-          {open} of {missions.length} unlocked · pick one and play
+          {t('missions.subtitle', { open, total: missions.length })}
         </p>
       </header>
 
-      <div className="filters" role="tablist" aria-label="Mission categories">
+      <div className="filters" role="tablist" aria-label={t('missions.categories')}>
         <button role="tab" aria-selected={filter === 'all'} className={`filter${filter === 'all' ? ' is-active' : ''}`} onClick={() => setFilter('all')}>
-          All
+          {t('missions.all')}
         </button>
         {categories.map((c) => (
           <button key={c} role="tab" aria-selected={filter === c} className={`filter${filter === c ? ' is-active' : ''}`} onClick={() => setFilter(c)}>
             <i style={{ background: CATEGORIES[c].color }} />
-            {CATEGORIES[c].label}
+            {categoryLabel(c, language)}
           </button>
         ))}
       </div>

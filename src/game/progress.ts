@@ -22,14 +22,20 @@ export function createInitialProgress(now: Date = new Date()): PlayerProgress {
 
 /* ---------- Mission status ---------- */
 
-export function getLockReason(mission: Mission, p: PlayerProgress): string | null {
+export type LockRequirement = { type: 'mission'; missionId: string } | { type: 'level'; level: number };
+
+/** Structured requirements let the UI translate them without parsing English text. */
+export function getLockRequirement(mission: Mission, p: PlayerProgress): LockRequirement | null {
   const { afterMission, minLevel } = mission.unlock;
-  if (afterMission && !(p.missions[afterMission]?.completions > 0)) {
-    return `Complete “${getMission(afterMission)?.title ?? afterMission}” to unlock`;
-  }
-  if (minLevel && getLevelInfo(p.xp).level < minLevel) {
-    return `Reach Level ${minLevel} to unlock`;
-  }
+  if (afterMission && !(p.missions[afterMission]?.completions > 0)) return { type: 'mission', missionId: afterMission };
+  if (minLevel && getLevelInfo(p.xp).level < minLevel) return { type: 'level', level: minLevel };
+  return null;
+}
+
+export function getLockReason(mission: Mission, p: PlayerProgress): string | null {
+  const requirement = getLockRequirement(mission, p);
+  if (requirement?.type === 'mission') return `Complete “${getMission(requirement.missionId)?.title ?? requirement.missionId}” to unlock`;
+  if (requirement?.type === 'level') return `Reach Level ${requirement.level} to unlock`;
   return null;
 }
 

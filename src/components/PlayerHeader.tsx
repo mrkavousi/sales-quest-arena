@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { getLevelInfo } from '../game/levels';
 import { isStreakSafeToday } from '../game/progress';
+import { levelTitle } from '../i18n/content';
+import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 import { Avatar } from './art/Avatar';
@@ -17,6 +19,7 @@ export function resetHeaderMemory(): void {
 
 export function PlayerHeader() {
   const { progress, stats, todayKey } = useGame();
+  const { language, t, n } = useLanguage();
   const from = lastShown ?? { xp: progress.xp, coins: progress.coins };
   const xp = useAnimatedNumber(progress.xp, { from: Math.min(from.xp, progress.xp), duration: 1300, delay: 450 });
   const coins = useAnimatedNumber(progress.coins, { from: Math.min(from.coins, progress.coins), duration: 1100, delay: 450 });
@@ -36,42 +39,41 @@ export function PlayerHeader() {
       <span className="hud__deco hud__deco--b" aria-hidden="true" />
 
       <div className="hud__row">
-        <button className="hud__avatar" onClick={() => navigate('/profile')} aria-label="Open your profile">
+        <button className="hud__avatar" onClick={() => navigate('/profile')} aria-label={t('hud.openProfile')}>
           <ProgressRing value={level.progress} size={76} stroke={6} color="var(--yellow)">
             <Avatar id={progress.player.avatar} size={58} />
           </ProgressRing>
-          <span className="hud__lv" style={{ background: level.color }}>{level.level}</span>
+          <span className="hud__lv" style={{ background: level.color }}>{n(level.level)}</span>
         </button>
 
         <div className="hud__id">
-          <span className="hud__hello">Welcome back</span>
-          <span className="hud__name">{progress.player.name}</span>
+          <span className="hud__hello">{t('hud.welcomeBack')}</span>
+          <span className="hud__name"><bdi>{progress.player.name}</bdi></span>
           <span className="hud__title">
-            Level {level.level} · {level.title}
+            {t('common.levelTitle', { level: level.level, title: levelTitle(level.level, language) })}
           </span>
         </div>
 
         <div className="hud__chips">
-          <span className={`chip chip--glass${streakSafe ? ' is-lit' : ''}`} title={streakSafe ? 'Streak safe for today' : 'Complete a mission today to grow your streak'}>
+          <span className={`chip chip--glass${streakSafe ? ' is-lit' : ''}`} title={t(streakSafe ? 'hud.streakSafe' : 'hud.streakPrompt')}>
             <FlameIcon size={22} dim={stats.streak === 0} />
-            <b>{stats.streak}</b>
+            <b>{n(stats.streak)}</b>
           </span>
-          <span className={`chip chip--glass${counting ? ' is-bumping' : ''}`} title="Coins">
+          <span className={`chip chip--glass${counting ? ' is-bumping' : ''}`} title={t('common.coins')}>
             <CoinIcon size={22} />
-            <b>{coins}</b>
+            <b>{n(coins)}</b>
           </span>
         </div>
       </div>
 
       <div className="hud__xp">
         <div className="hud__xp-top">
-          <span className="hud__xp-label">{level.isMax ? 'Max level reached' : `${level.nextMinXp! - xp} XP to ${level.nextTitle}`}</span>
+          <span className="hud__xp-label">{level.isMax ? t('common.maxLevel') : t('common.xpToNext', { xp: level.nextMinXp! - xp, title: levelTitle(level.level + 1, language) })}</span>
           <span className="hud__xp-num">
-            <b>{xp}</b>
-            {level.isMax ? ' XP' : ` / ${level.nextMinXp} XP`}
+            <bdi dir="ltr"><b>{n(xp)}</b>{level.isMax ? '' : ` / ${n(level.nextMinXp!)}`}</bdi> {t('common.xp')}
           </span>
         </div>
-        <ProgressBar value={level.progress} tone="yellow" size="lg" instant={counting} label="XP progress to next level" />
+        <ProgressBar value={level.progress} tone="yellow" size="lg" instant={counting} label={t('hud.xpProgress')} />
       </div>
     </header>
   );
