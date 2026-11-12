@@ -7,7 +7,11 @@ import { ensureDaily, getLockReason } from './progress';
 import { calculateRewards } from './rewards';
 import type { Answers, HistoryEntry, PlayerProgress } from './types';
 
-export class MissionError extends Error {}
+export class MissionError extends Error {
+  constructor(message: string, readonly code: 'unknown' | 'locked' | 'incomplete' = 'unknown') {
+    super(message);
+  }
+}
 
 export interface CompletionResult {
   progress: PlayerProgress;
@@ -33,11 +37,11 @@ export function completeMission(
   if (!mission) throw new MissionError(`Unknown mission: ${missionId}`);
 
   const lockReason = getLockReason(mission, current);
-  if (lockReason) throw new MissionError(lockReason);
+  if (lockReason) throw new MissionError(lockReason, 'locked');
 
   const answers = sanitizeAnswers(mission, rawAnswers);
   if (!isMissionComplete(mission, answers)) {
-    throw new MissionError('This mission still has unanswered challenges.');
+    throw new MissionError('This mission still has unanswered challenges.', 'incomplete');
   }
 
   const todayKey = toDateKey(now);

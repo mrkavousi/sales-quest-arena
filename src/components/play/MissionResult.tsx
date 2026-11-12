@@ -2,6 +2,8 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { getAchievement } from '../../game/achievements';
 import { getLevelDef, getLevelInfo } from '../../game/levels';
 import type { HistoryEntry, Mission } from '../../game/types';
+import { levelTitle, localizeAchievement, rewardLabel } from '../../i18n/content';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { navigate } from '../../router';
 import { AchievementBadge } from '../AchievementBadge';
 import { Confetti } from '../ui/Confetti';
@@ -13,6 +15,7 @@ import { RewardFlyout, RewardHero } from './RewardAnimation';
 type Phase = 'start' | 'fill' | 'levelup' | 'snap' | 'final';
 
 function LevelBadge({ level, color, size = 64 }: { level: number; color: string; size?: number }) {
+  const { n } = useLanguage();
   return (
     <span className="levelbadge" style={{ '--lc': color, width: size, height: size * 1.1, fontSize: size * 0.42 } as CSSProperties}>
       <svg viewBox="0 0 64 70" aria-hidden="true">
@@ -20,7 +23,7 @@ function LevelBadge({ level, color, size = 64 }: { level: number; color: string;
         <path d="M32 3l25 9v22c0 16-10.5 27-25 33C17.5 61 7 50 7 34V12z" fill="var(--lc)" stroke="#fff" strokeWidth="4" strokeLinejoin="round" />
         <path d="M32 9l19 7v9L32 18 13 25v-9z" fill="#fff" opacity=".28" />
       </svg>
-      <b>{level}</b>
+      <b>{n(level)}</b>
     </span>
   );
 }
@@ -32,6 +35,7 @@ interface MissionResultProps {
 
 /** Mission completion screen. Everything shown here is derived from the saved history entry. */
 export function MissionResult({ entry, mission }: MissionResultProps) {
+  const { language, t, n } = useLanguage();
   const leveledUp = entry.levelAfter > entry.levelBefore;
   const [phase, setPhase] = useState<Phase>('start');
   const [burst, setBurst] = useState(0);
@@ -47,13 +51,13 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
       window.setTimeout(() => setPhase(leveledUp ? 'fill' : 'final'), 1900),
       ...(leveledUp ? [window.setTimeout(() => { setPhase('levelup'); setBurst((b) => b + 1); buzz([20, 60, 40]); }, 2850)] : []),
     ];
-    return () => timers.forEach((t) => window.clearTimeout(t));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [leveledUp]);
 
   useEffect(() => {
     if (phase !== 'snap') return;
-    const t = window.setTimeout(() => setPhase('final'), 80);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setPhase('final'), 80);
+    return () => window.clearTimeout(timer);
   }, [phase]);
 
   const before = getLevelInfo(entry.xpBefore);
@@ -77,29 +81,29 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
       <div className="result__stage">
         <RewardHero />
 
-        <h1 className="result__title">Mission Completed!</h1>
+        <h1 className="result__title">{t('result.completed')}</h1>
         <p className="result__mission">{mission.title}</p>
 
         <div className="result__rewards">
           <div className="rewardcard rewardcard--xp">
             <XpIcon size={44} />
-            <b>+{xpEarned}</b>
-            <span>XP earned</span>
+            <b><bdi dir="ltr">+{n(xpEarned)}</bdi></b>
+            <span>{t('history.xpEarned')}</span>
           </div>
           <div className="rewardcard rewardcard--coin">
             <CoinIcon size={44} />
-            <b>+{coinsEarned}</b>
-            <span>Coins earned</span>
+            <b><bdi dir="ltr">+{n(coinsEarned)}</bdi></b>
+            <span>{t('result.coinsEarned')}</span>
           </div>
         </div>
 
-        <ul className="result__lines" aria-label="Reward breakdown">
+        <ul className="result__lines" aria-label={t('result.breakdown')}>
           {entry.rewards.lines.map((line, i) => (
             <li key={line.ruleId} style={{ '--i': i } as CSSProperties}>
-              <span>{line.label}</span>
+              <span>{rewardLabel(line, language)}</span>
               <span className="result__line-values">
-                {line.xp > 0 && <b className="is-xp">+{line.xp} XP</b>}
-                {line.coins > 0 && <b className="is-coin">+{line.coins} coins</b>}
+                {line.xp > 0 && <b className="is-xp"><bdi dir="ltr">+{n(line.xp)}</bdi> {t('common.xp')}</b>}
+                {line.coins > 0 && <b className="is-coin"><bdi dir="ltr">+{n(line.coins)}</bdi> {t('result.coinsUnit')}</b>}
               </span>
             </li>
           ))}
@@ -110,32 +114,35 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
           <div className="result__level-info">
             <div className="result__level-top">
               <span className="result__level-name">
-                Level {shown.level} · {shown.title}
+                {t('common.levelTitle', { level: shown.level, title: levelTitle(shown.level, language) })}
               </span>
               <span className="result__total">
-                <b>{totalXp}</b> XP total
+                <b>{n(totalXp)}</b> {t('result.xpTotalUnit')}
               </span>
             </div>
-            <ProgressBar value={barValue} tone="yellow" size="lg" instant={phase === 'snap'} label="Level progress" />
+            <ProgressBar value={barValue} tone="yellow" size="lg" instant={phase === 'snap'} label={t('common.levelProgress')} />
             <span className="result__level-hint">
-              {shown.isMax ? 'Max level reached — you are a Champion!' : `${Math.max(0, shown.nextMinXp! - totalXp)} XP to ${shown.nextTitle}`}
+              {shown.isMax ? t('result.maxLevel') : t('common.xpToNext', { xp: Math.max(0, shown.nextMinXp! - totalXp), title: levelTitle(shown.level + 1, language) })}
             </span>
           </div>
         </div>
 
         {achievements.length > 0 && (
           <div className="result__achievements">
-            <h2>{achievements.length > 1 ? 'Achievements unlocked!' : 'Achievement unlocked!'}</h2>
+            <h2>{t(achievements.length > 1 ? 'result.achievementMany' : 'result.achievementOne')}</h2>
             <ul>
-              {achievements.map((a, i) => (
-                <li key={a.id} style={{ '--i': i } as CSSProperties}>
-                  <AchievementBadge achievement={a} unlocked size="md" showLabel={false} />
-                  <div>
-                    <b>{a.title}</b>
-                    <span>{a.description}</span>
-                  </div>
-                </li>
-              ))}
+              {achievements.map((a, i) => {
+                const text = localizeAchievement(a, language);
+                return (
+                  <li key={a.id} style={{ '--i': i } as CSSProperties}>
+                    <AchievementBadge achievement={a} unlocked size="md" showLabel={false} />
+                    <div>
+                      <b>{text.title}</b>
+                      <span>{text.description}</span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -143,7 +150,7 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
         <div className="result__streak">
           <FlameIcon size={22} />
           <span>
-            <b>{entry.streakAfter}-day streak</b> · {entry.streakAfter > 1 ? 'keep it burning!' : 'play again tomorrow'}
+            <b>{t('result.streak', { days: entry.streakAfter })}</b> · {t(entry.streakAfter > 1 ? 'result.keepBurning' : 'result.tomorrow')}
           </span>
         </div>
       </div>
@@ -152,24 +159,24 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
         <div className="result__foot-inner">
           <RewardFlyout active={collecting} />
           <button className="btn btn--yellow btn--block btn--lg" onClick={() => collect('/')} disabled={collecting}>
-            Collect &amp; continue
+            {t('result.collect')}
           </button>
           <button className="linkbtn linkbtn--light" onClick={() => navigate('/history')} disabled={collecting}>
-            View mission history
+            {t('result.viewHistory')}
           </button>
         </div>
       </footer>
 
       {phase === 'levelup' && (
-        <div className="levelup" role="dialog" aria-modal="true" aria-label={`Level up! You reached level ${newLevel.level}`} onClick={() => setPhase('snap')}>
+        <div className="levelup" role="dialog" aria-modal="true" aria-label={t('result.levelUpLabel', { level: newLevel.level })} onClick={() => setPhase('snap')}>
           <span className="levelup__rays" aria-hidden="true" />
           <div className="levelup__card">
-            <span className="levelup__eyebrow">Level up!</span>
+            <span className="levelup__eyebrow">{t('result.levelUp')}</span>
             <LevelBadge level={newLevel.level} color={newLevel.color} size={130} />
-            <h2>{newLevel.title}</h2>
-            <p>You reached Level {newLevel.level}. Keep the quests coming!</p>
+            <h2>{levelTitle(newLevel.level, language)}</h2>
+            <p>{t('result.levelUpDescription', { level: newLevel.level })}</p>
             <button className="btn btn--yellow btn--block" onClick={() => setPhase('snap')} autoFocus>
-              Awesome!
+              {t('result.awesome')}
             </button>
           </div>
         </div>

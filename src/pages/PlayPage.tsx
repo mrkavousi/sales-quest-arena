@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MissionGameplay } from '../components/play/MissionGameplay';
 import { MissionResult } from '../components/play/MissionResult';
 import { getMission } from '../game/missions';
+import { localizeMission } from '../i18n/content';
+import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 
 /** /play/:missionId — validates access, opens (or resumes) a run, then hands over to the gameplay. */
 export function PlayPage({ missionId }: { missionId: string | null }) {
   const { startMission, toast } = useGame();
+  const { language, t } = useLanguage();
   const mission = missionId ? getMission(missionId) : undefined;
+  const localized = useMemo(() => mission ? localizeMission(mission, language) : undefined, [mission, language]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -17,20 +21,21 @@ export function PlayPage({ missionId }: { missionId: string | null }) {
       return;
     }
     if (!startMission(mission.id)) {
-      toast('That mission is still locked.', 'warn');
+      toast(t('play.locked'), 'warn');
       navigate('/', { replace: true });
       return;
     }
     setReady(true);
-  }, [mission, startMission, toast]);
+  }, [mission, startMission, toast, t]);
 
-  if (!mission || !ready) return null;
-  return <MissionGameplay mission={mission} />;
+  if (!localized || !ready) return null;
+  return <MissionGameplay mission={localized} />;
 }
 
 /** /result/:entryId — the completion screen, rebuilt from the saved history entry (refresh-safe). */
 export function ResultPage({ entryId }: { entryId: string | null }) {
   const { progress } = useGame();
+  const { language } = useLanguage();
   const entry = progress.history.find((h) => h.id === entryId);
   const mission = entry ? getMission(entry.missionId) : undefined;
 
@@ -39,5 +44,5 @@ export function ResultPage({ entryId }: { entryId: string | null }) {
   }, [entry, mission]);
 
   if (!entry || !mission) return null;
-  return <MissionResult entry={entry} mission={mission} />;
+  return <MissionResult entry={entry} mission={localizeMission(mission, language)} />;
 }

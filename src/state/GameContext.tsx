@@ -4,8 +4,10 @@ import { toDateKey } from '../game/dates';
 import { getLevelInfo, type LevelInfo } from '../game/levels';
 import { getMission } from '../game/missions';
 import { createInitialProgress, ensureDaily, getLockReason, getMissionViews, getPlayerStats, type PlayerStats } from '../game/progress';
-import { clearProgress, isStorageAvailable, loadProgress, saveProgress } from '../game/storage';
+import { clearProgress, isStorageAvailable, loadProgress, saveProgress, STORAGE_KEY } from '../game/storage';
 import type { Answers, AvatarId, HistoryEntry, MissionView, PlayerProgress } from '../game/types';
+import { localizeMissionView } from '../i18n/content';
+import { useLanguage } from '../i18n/LanguageContext';
 
 /** 'saved' = verified on disk · 'unavailable' = browser blocks storage · 'error' = last write failed */
 export type PersistenceState = 'saved' | 'unavailable' | 'error';
@@ -37,6 +39,7 @@ interface GameContextValue {
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
+  const { language, t } = useLanguage();
   const [boot] = useState(() => {
     const loaded = loadProgress();
     return { progress: loaded.progress ?? createInitialProgress(), status: loaded.status };
@@ -83,7 +86,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // If the save was changed in another tab, follow it instead of overwriting it.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.storageArea !== window.localStorage) return;
+      if (e.storageArea !== window.localStorage || (e.key !== STORAGE_KEY && e.key !== null)) return;
       const loaded = loadProgress();
       const next = loaded.progress ?? (loaded.status === 'empty' ? createInitialProgress() : null);
       if (next) {
@@ -97,9 +100,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const completeOnboarding = useCallback(
     (name: string, avatar: AvatarId) => {
-      commit((p) => ({ ...p, player: { ...p.player, name: name.trim().slice(0, 24) || 'Rookie', avatar, onboarded: true } }));
+      commit((p) => ({ ...p, player: { ...p.player, name: name.trim().slice(0, 24) || t('welcome.defaultName'), avatar, onboarded: true } }));
     },
-    [commit],
+    [commit, t],
   );
 
   const updatePlayer = useCallback(
@@ -160,11 +163,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
         commit(() => result.progress);
         return result.entry;
       } catch (err) {
-        toast(err instanceof MissionError ? err.message : 'Something went wrong. Please try again.', 'warn');
+        const message = err instanceof MissionError && err.code === 'locked'
+          ? t('play.locked')
+          : err instanceof MissionError && err.code === 'incomplete'
+            ? t('play.incomplete')
+            : t('play.error');
+        toast(message, 'warn');
         return null;
       }
     },
-    [commit, toast],
+    [commit, toast, t],
   );
 
   const resetProgress = useCallback(() => {
@@ -175,11 +183,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setPersistence(isStorageAvailable() ? 'saved' : 'unavailable');
   }, []);
 
+  const missions = useMemo(
+    () => getMissionViews(progress, todayKey).map((mission) => localizeMissionView(mission, progress, language)),
+    [progress, todayKey, language],
+  );
+
   const value = useMemo<GameContextValue>(
     () => ({
       progress,
       todayKey,
-      missions: getMissionViews(progress, todayKey),
+      missions,
       level: getLevelInfo(progress.xp),
       stats: getPlayerStats(progress, todayKey),
       persistence,
@@ -193,7 +206,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       finishMission,
       resetProgress,
     }),
-    [progress, todayKey, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, discardDraft, finishMission, resetProgress],
+    [progress, todayKey, missions, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, discardDraft, finishMission, resetProgress],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

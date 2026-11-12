@@ -3,15 +3,20 @@ import { Mascot } from '../components/art/Mascot';
 import { CATEGORY_ICON } from '../components/art/MissionArt';
 import { Stars } from '../components/MissionBits';
 import { CoinIcon, Icon, XpIcon } from '../components/ui/Icon';
-import { formatDayLabel, formatTime } from '../game/dates';
+import { toDateKey } from '../game/dates';
 import { CATEGORIES, getMission } from '../game/missions';
 import type { HistoryEntry } from '../game/types';
+import { localizeMission } from '../i18n/content';
+import { formatDayLabel, formatTime } from '../i18n/locale';
+import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 
 function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
-  const mission = getMission(entry.missionId);
-  if (!mission) return null; // mission was removed from the catalog
+  const { language, t, n } = useLanguage();
+  const original = getMission(entry.missionId);
+  if (!original) return null; // mission was removed from the catalog
+  const mission = localizeMission(original, language);
   const meta = CATEGORIES[mission.category];
   const note = mission.steps.find((s) => s.type === 'note');
   const noteText = note ? entry.answers[note.id] : undefined;
@@ -25,7 +30,7 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
       <div className="hcard__body">
         <div className="hcard__top">
           <h3>{mission.title}</h3>
-          <time dateTime={entry.completedAt}>{formatTime(entry.completedAt)}</time>
+          <time dateTime={entry.completedAt} dir="auto">{formatTime(language, entry.completedAt)}</time>
         </div>
         <div className="hcard__answers">
           {mission.steps.map((step) => {
@@ -43,12 +48,12 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
             return null;
           })}
         </div>
-        {typeof noteText === 'string' && noteText && <p className="hcard__note">“{noteText}”</p>}
+        {typeof noteText === 'string' && noteText && <p className="hcard__note"><bdi>“{noteText}”</bdi></p>}
         <div className="hcard__rewards">
-          <span className="hcard__reward"><XpIcon size={16} />+{entry.rewards.xp} XP</span>
-          <span className="hcard__reward"><CoinIcon size={16} />+{entry.rewards.coins}</span>
-          {entry.wasDaily && <span className="pill pill--daily">Daily bonus</span>}
-          {entry.levelAfter > entry.levelBefore && <span className="pill pill--level">Level {entry.levelAfter}!</span>}
+          <span className="hcard__reward"><XpIcon size={16} /><bdi dir="ltr">+{n(entry.rewards.xp)}</bdi> {t('common.xp')}</span>
+          <span className="hcard__reward"><CoinIcon size={16} /><bdi dir="ltr">+{n(entry.rewards.coins)}</bdi></span>
+          {entry.wasDaily && <span className="pill pill--daily">{t('history.dailyBonus')}</span>}
+          {entry.levelAfter > entry.levelBefore && <span className="pill pill--level">{t('history.level', { level: entry.levelAfter })}</span>}
         </div>
       </div>
     </li>
@@ -57,40 +62,41 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
 
 export function HistoryPage() {
   const { progress, stats } = useGame();
-  const groups: { label: string; entries: HistoryEntry[] }[] = [];
+  const { language, t, n } = useLanguage();
+  const groups: { key: string; label: string; entries: HistoryEntry[] }[] = [];
   for (const entry of progress.history) {
-    const label = formatDayLabel(entry.completedAt);
+    const key = toDateKey(new Date(entry.completedAt));
     const last = groups[groups.length - 1];
-    if (last && last.label === label) last.entries.push(entry);
-    else groups.push({ label, entries: [entry] });
+    if (last && last.key === key) last.entries.push(entry);
+    else groups.push({ key, label: formatDayLabel(language, entry.completedAt), entries: [entry] });
   }
   const xpFromMissions = progress.history.reduce((sum, h) => sum + h.rewards.xp, 0);
 
   return (
     <div className="pagebody">
       <header className="pagehead">
-        <h1>Mission History</h1>
-        <p>Every quest you have completed, newest first.</p>
+        <h1>{t('history.title')}</h1>
+        <p>{t('history.subtitle')}</p>
       </header>
 
       {progress.history.length === 0 ? (
         <div className="empty">
           <Mascot size={110} mood="think" />
-          <h2>No missions yet</h2>
-          <p>Complete your first mission and it will show up here.</p>
+          <h2>{t('history.emptyTitle')}</h2>
+          <p>{t('history.emptyText')}</p>
           <button className="btn btn--green" onClick={() => navigate('/')}>
-            Go to the arena
+            {t('history.goArena')}
           </button>
         </div>
       ) : (
         <>
           <div className="summary">
-            <div><b>{stats.missionsCompleted}</b><span>Missions</span></div>
-            <div><b>{xpFromMissions}</b><span>XP earned</span></div>
-            <div><b>{stats.ordersLogged}</b><span>Orders</span></div>
+            <div><b>{n(stats.missionsCompleted)}</b><span>{t('nav.missions')}</span></div>
+            <div><b>{n(xpFromMissions)}</b><span>{t('history.xpEarned')}</span></div>
+            <div><b>{n(stats.ordersLogged)}</b><span>{t('history.orders')}</span></div>
           </div>
           {groups.map((group) => (
-            <section key={group.label} className="hgroup">
+            <section key={group.key} className="hgroup">
               <h2 className="hgroup__label">{group.label}</h2>
               <ul className="hlist">
                 {group.entries.map((entry, i) => (

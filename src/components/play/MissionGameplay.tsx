@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { CATEGORIES, isStepAnswered, isStepRequired } from '../../game/missions';
 import type { Answers, AnswerValue, Mission, MissionDraft } from '../../game/types';
+import { keyboardDigit } from '../../i18n/locale';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { navigate } from '../../router';
 import { useGame } from '../../state/GameContext';
 import { Mascot, type MascotMood } from '../art/Mascot';
+import { LanguageSwitcher } from '../LanguageSwitcher';
 import { Icon } from '../ui/Icon';
 import { buzz } from '../ui/motion';
 import { Sheet } from '../ui/Sheet';
@@ -30,6 +33,7 @@ function moodFor(mission: Mission, index: number, answers: Answers): MascotMood 
 
 export function MissionGameplay({ mission }: { mission: Mission }) {
   const { progress, saveDraft, discardDraft, finishMission } = useGame();
+  const { t, n } = useLanguage();
   const [answers, setAnswers] = useState<Answers>(() => progress.drafts[mission.id]?.answers ?? {});
   const [index, setIndex] = useState(() => resumeIndex(mission, progress.drafts[mission.id]));
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
@@ -84,25 +88,25 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
         goNext();
         return;
       }
-      const n = Number(e.key);
-      if (!Number.isInteger(n) || n < 1) return;
-      if (step.type === 'choice' && step.options[n - 1]) setAnswer(step.options[n - 1].id);
-      if (step.type === 'rating' && n <= 5) setAnswer(n);
+      const digit = keyboardDigit(e.key);
+      if (!Number.isInteger(digit) || digit < 1) return;
+      if (step.type === 'choice' && step.options[digit - 1]) setAnswer(step.options[digit - 1].id);
+      if (step.type === 'rating' && digit <= 5) setAnswer(digit);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, pauseOpen, setAnswer, step]);
 
-  const cta = isLast ? 'Complete mission' : step.type === 'note' && !answered ? 'Skip' : 'Continue';
+  const cta = t(isLast ? 'play.complete' : step.type === 'note' && !answered ? 'play.skip' : 'common.continue');
 
   return (
     <div className="play" style={{ '--c': meta.color, '--d': meta.dark, '--soft': meta.soft } as CSSProperties}>
       <div className="play__stage">
         <header className="play__top">
-          <button className="iconbtn" onClick={() => setPauseOpen(true)} aria-label="Pause mission">
+          <button className="iconbtn" onClick={() => setPauseOpen(true)} aria-label={t('play.pause')}>
             <Icon name="close" size={22} />
           </button>
-          <div className="play__progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index + (answered ? 1 : 0)} aria-label="Mission progress">
+          <div className="play__progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index + (answered ? 1 : 0)} aria-label={t('common.missionProgress')}>
             {mission.steps.map((s, i) => (
               <span key={s.id} className={`play__seg${i < index || (i === index && answered) ? ' is-done' : ''}${i === index ? ' is-current' : ''}`}>
                 <i />
@@ -110,7 +114,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
             ))}
           </div>
           <span className="play__count">
-            {index + 1}/{total}
+            <bdi dir="ltr">{n(index + 1)}/{n(total)}</bdi>
           </span>
         </header>
 
@@ -119,8 +123,8 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
             <Mascot size={78} mood={moodFor(mission, index, answers)} className="ask__mascot" />
             <div className="ask__bubble">
               <span className="ask__eyebrow">
-                Challenge {index + 1}
-                {!required && <em>Optional</em>}
+                {t('play.challenge', { number: index + 1 })}
+                {!required && <em>{t('play.optional')}</em>}
               </span>
               <h1 className="ask__question">{step.question}</h1>
               {step.helper && <p className="ask__helper">{step.helper}</p>}
@@ -131,7 +135,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
 
         <footer className="play__foot">
           {index > 0 && (
-            <button className="btn btn--ghost btn--square" onClick={goBack} aria-label="Previous challenge">
+            <button className="btn btn--ghost btn--square" onClick={goBack} aria-label={t('play.previous')}>
               <Icon name="back" size={24} />
             </button>
           )}
@@ -142,16 +146,20 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
         </footer>
       </div>
 
-      <Sheet open={pauseOpen} onClose={() => setPauseOpen(false)} label="Pause mission" size="sm" hideClose>
+      <Sheet open={pauseOpen} onClose={() => setPauseOpen(false)} label={t('play.pause')} size="sm" hideClose>
         <div className="confirm">
           <Mascot size={84} mood="idle" />
-          <h2>Take a break?</h2>
-          <p>Your answers are saved. You can pick this mission up right where you left off.</p>
+          <h2>{t('play.breakTitle')}</h2>
+          <p>{t('play.breakDescription')}</p>
+          <div className="pause__language">
+            <span>{t('language.label')}</span>
+            <LanguageSwitcher />
+          </div>
           <button className="btn btn--green btn--block" onClick={() => setPauseOpen(false)}>
-            Keep playing
+            {t('play.keepPlaying')}
           </button>
           <button className="btn btn--ghost btn--block" onClick={() => navigate('/')}>
-            Save &amp; exit
+            {t('play.saveExit')}
           </button>
           <button
             className="linkbtn linkbtn--danger"
@@ -160,7 +168,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
               navigate('/');
             }}
           >
-            Quit and discard answers
+            {t('play.discard')}
           </button>
         </div>
       </Sheet>

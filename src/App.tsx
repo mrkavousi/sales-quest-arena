@@ -5,6 +5,7 @@ import { MissionsPage } from './pages/MissionsPage';
 import { PlayPage, ResultPage } from './pages/PlayPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { WelcomePage } from './pages/WelcomePage';
+import { LanguageProvider } from './i18n/LanguageContext';
 import { useRoute } from './router';
 import { GameProvider, useGame } from './state/GameContext';
 
@@ -28,9 +29,11 @@ function Screens() {
 
 export default function App() {
   return (
-    <GameProvider>
-      <Screens />
-      <ToastHost />
-    </GameProvider>
+    <LanguageProvider>
+      <GameProvider>
+        <Screens />
+        <ToastHost />
+      </GameProvider>
+    </LanguageProvider>
   );
 }

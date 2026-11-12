@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { AvatarId } from '../../game/types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface AvatarSpec {
   name: string;
@@ -29,6 +30,7 @@ interface AvatarProps {
 
 /** Original, parametric animal avatars drawn in SVG. */
 export function Avatar({ id, size = 64, className, animated = true }: AvatarProps) {
+  const { t } = useLanguage();
   const spec = AVATARS[id] ?? AVATARS.fox;
   const gid = useId().replace(/:/g, '');
   const ink = '#2b2140';
@@ -37,7 +39,7 @@ export function Avatar({ id, size = 64, className, animated = true }: AvatarProp
   const eyeX = isFrog ? 16 : 11.5;
 
   return (
-    <svg className={`avatar ${className ?? ''}`} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={`${spec.name} avatar`}>
+    <svg className={`avatar ${className ?? ''}`} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={t('avatar.description', { name: t(`avatar.${id}`) })}>
       <defs>
         <linearGradient id={`bg${gid}`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor={spec.bg[0]} />
