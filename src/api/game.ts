@@ -223,39 +223,56 @@ export async function postCompletion(csrf: string, missionId: string, answers: A
 }
 
 /**
- * The prototype has no JSON user-list endpoint. Read its current login form and
- * retain only visitor options; never trust these IDs as authorization. The BFF
- * still checks the signed cookie and visitor role on every request.
+ * Dev/test-only JSON demo accounts. These IDs only populate the picker; the BFF
+ * still authorizes every request from the signed HttpOnly cookie and visitor role.
  */
 export async function getDemoUsers(): Promise<DemoUser[]> {
-  return request('/login', { headers: { Accept: 'text/html' } }, async (response) => {
-    if (!response.ok) throw new GameApiError(response.status, `HTTP_${response.status}`, 'The demo login page could not be loaded.');
-    const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
-    const select = doc.querySelector<HTMLSelectElement>('form[action="/demo-login"] select[name="user_id"]');
-    const users = Array.from(select?.options ?? [])
-      .map((option) => ({ id: option.value, label: (option.textContent ?? '').replace(/\s+/g, ' ').trim() }))
-      .filter((user) => user.id && /(?:—|-)\s*ویزیتور\s*$/.test(user.label));
-    if (!users.length) throw new GameApiError(0, 'DEMO_USERS_UNAVAILABLE', 'No visitor accounts were found in the demo login form.');
-    return users;
+  const data = await request(`${ROOT}/demo-users`, { headers: { Accept: 'application/json' } }, async (response) => {
+    try {
+      return await readJson<unknown>(response);
+    } catch (error) {
+      // The route exists only in dev/test; elsewhere (or on an older backend)
+      // the 404 is "demo sign-in is unavailable", not invalid player input.
+      if (error instanceof GameApiError && error.status === 404) throw new GameApiError(404, 'DEMO_USERS_UNAVAILABLE', 'Demo accounts are not available on this server.');
+      throw error;
+    }
   });
+  const users = object(data) && Array.isArray(data.users) ? data.users : null;
+  if (!users || !users.every((user: unknown) => object(user) && string(user.id) && string(user.name))) {
+    throw new GameApiError(0, 'INVALID_RESPONSE', 'The demo account list is invalid.');
+  }
+  const list = users
+    .map((user) => ({ id: (user as { id: string }).id, label: (user as { name: string }).name.replace(/\s+/g, ' ').trim() }))
+    .filter((user) => user.id && user.label);
+  if (!list.length) throw new GameApiError(0, 'DEMO_USERS_UNAVAILABLE', 'No demo visitor accounts are available.');
+  return list;
 }
 
 /**
- * The backend's demo endpoint sends a 303 to an HTML URL containing a session
- * token. Manual redirect accepts the HttpOnly cookie without following, reading,
- * logging, or putting that URL into browser history. Bootstrap proves login worked.
+ * JSON sign-in. The HttpOnly cookie is set by the response and the CSRF token is
+ * returned in a header; neither is stored by this client. Bootstrap proves that
+ * the cookie session really works before any player data is rendered.
  */
 export async function demoLogin(userId: string): Promise<GameBootstrap> {
-  const body = new URLSearchParams({ user_id: userId });
-  await request('/demo-login', {
+  await request(`${ROOT}/demo-login`, {
     method: 'POST',
-    body,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-    redirect: 'manual',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId }),
   }, async (response) => {
-    if (response.type !== 'opaqueredirect' && response.status !== 303 && response.status !== 302) {
-      throw new GameApiError(response.status, `HTTP_${response.status}`, 'Demo sign-in failed.');
+    try {
+      await readJson<unknown>(response);
+    } catch (error) {
+      // The JSON login route only exists in dev/test. Elsewhere the backend
+      // answers 404, which would otherwise read as "wrong visitor".
+      if (error instanceof GameApiError && error.status === 404) throw new GameApiError(404, 'DEMO_LOGIN_DISABLED', 'Demo sign-in is disabled on this server.');
+      throw error;
     }
   });
   return getBootstrap();
+}
+
+/** Best-effort cookie logout; the caller falls back to the account picker regardless. */
+export async function demoLogout(csrf: string): Promise<boolean> {
+  const data = await jsonRequest<unknown>(`${ROOT}/logout`, { method: 'POST', headers: { 'X-CSRF-Token': csrf } });
+  return object(data) && data.logged_out === true;
 }

@@ -6,7 +6,10 @@ export function apiErrorKey(error: unknown): MessageKey {
   if (error.code === 'UNSUPPORTED_VERSION') return 'connection.errorVersion';
   if (error.code === 'COOKIE_BLOCKED') return 'connection.cookieBlocked';
   if (error.code === 'RECOVERY_UNRESOLVED') return 'connection.pendingUnconfirmed';
-  if (error.code === 'INVALID_RESPONSE' || error.code === 'DEMO_USERS_UNAVAILABLE') return 'connection.errorResponse';
+  if (error.code === 'INVALID_RESPONSE') return 'connection.errorResponse';
+  if (error.code === 'DEMO_USERS_UNAVAILABLE') return 'connection.demoUsersUnavailable';
+  if (error.code === 'DEMO_LOGIN_DISABLED') return 'connection.demoLoginDisabled';
+  if (error.code === 'RATE_LIMITED') return 'connection.errorRateLimited';
   if (error.code === 'NETWORK_ERROR') return 'connection.errorNetwork';
   if (error.status === 401) return 'connection.errorAuth';
   if (error.status === 403) return 'connection.errorPermission';

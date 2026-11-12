@@ -38,3 +38,4 @@
 .result__sync .linkbtn { padding: 3px 7px; }
 .play__answers.is-busy { pointer-events: none; opacity: .7; }
 .history-more { display: grid; justify-items: center; gap: 10px; margin: 20px 0; color: var(--ink-2); font-size: 13px; }
+.connection-gate__notice { padding: 10px 12px; border-radius: 12px; background: #dff7ea; color: #17643c !important; font-weight: 800; }

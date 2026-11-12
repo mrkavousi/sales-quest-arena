@@ -14,7 +14,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useGame } from '../state/GameContext';
 
 export function ProfilePage() {
-  const { mode, switchMode, account, changeAccount, refresh, config, achievements, progress, level, stats, persistence, updatePlayer, resetProgress, toast } = useGame();
+  const { mode, switchMode, account, changeAccount, signOut, refresh, config, achievements, progress, level, stats, persistence, updatePlayer, resetProgress, toast } = useGame();
   const { language, t, n } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(progress.player.name);
@@ -142,6 +142,7 @@ export function ProfilePage() {
           <div className="connection-profile__actions">
             <button className="btn btn--ghost btn--sm" onClick={() => void refresh()}>{t('connection.refresh')}</button>
             <button className="btn btn--ghost btn--sm" onClick={changeAccount}>{t('connection.switchAccount')}</button>
+            <button className="btn btn--ghost btn--sm btn--danger" onClick={() => void signOut()}>{t('connection.signOut')}</button>
             <button className="btn btn--ghost btn--sm" onClick={() => switchMode('local')}>{t('connection.useLocal')}</button>
           </div>
         )}

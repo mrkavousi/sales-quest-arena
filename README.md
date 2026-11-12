@@ -23,8 +23,12 @@ npm run test:pwa    # builds and tests installability, offline play and updates
 SQA_BACKEND_DIR=../comu-center SQA_BACKEND_PYTHON=../comu-center/.venv/bin/python npm run test:bff
 ```
 
-The device-only game is the default and needs no backend. To run the server-backed
-demo with the current `iciiex/comu-center` BFF, see [BFF integration](docs/bff-integration.md)
+The device-only game is the default and needs no backend. Server mode signs in through
+`GET /api/v1/game/demo-users`, `POST /api/v1/game/demo-login` and `POST
+/api/v1/game/logout`; the profile screen offers **Sign out**, while switching to the
+device-only game deliberately leaves the demo session in place. To run the
+server-backed demo with the current `iciiex/comu-center` BFF, see
+[BFF integration](docs/bff-integration.md)
 for setup, same-origin proxy requirements, data boundaries, and security limitations.
 
 Stack: React 18 + TypeScript + Vite. No UI kit, no animation library, no 3D engine —
@@ -39,8 +43,8 @@ navigation does not need a catch-all rewrite. Vercel normally uses the configure
 production branch for the production URL and other branches for previews.
 
 **The Vercel configuration does not provide a backend proxy.** Server mode works only
-when an explicitly configured same-origin reverse proxy routes the API and demo-login
-paths to a compatible backend. Do not expose the demo login publicly; see the
+when an explicitly configured same-origin reverse proxy routes `/api/v1/game/*` to a
+compatible backend (its JSON demo sign-in routes are dev/test-only). Do not expose the demo login publicly; see the
 [deployment and security notes](docs/bff-integration.md#deployment-and-security).
 Device-only progress and the language preference remain scoped to the site's origin;
 server progress belongs to the signed-in demo account and is separate.

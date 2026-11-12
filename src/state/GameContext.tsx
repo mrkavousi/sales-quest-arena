@@ -142,7 +142,7 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
   const refresh = useCallback(async () => true, []);
   const loadHistory = useCallback(async () => ({ items: ref.current.history, next_cursor: null }), []);
   const value = useMemo<GameContextValue>(() => ({
-    mode: 'local', switchMode, account: null, changeAccount: () => {}, progress, todayKey, serverClockOffset: 0,
+    mode: 'local', switchMode, account: null, changeAccount: () => {}, signOut: async () => false, progress, todayKey, serverClockOffset: 0,
     missions, config: GAME_CONFIG, categories: CATEGORIES, difficulty: DIFFICULTY, achievements: ACHIEVEMENTS,
     level: getLevelInfo(progress.xp), stats: getPlayerStats(progress, todayKey), persistence, sessionChanged: false, contractError: null, toasts, toast,
     completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, resetProgress,

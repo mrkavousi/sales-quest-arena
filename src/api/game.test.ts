@@ -5,7 +5,7 @@ import { GAME_CONFIG } from '../game/config';
 import { CATEGORIES, CUSTOMER_VISIT_ID, DIFFICULTY } from '../game/missions';
 import { createInitialProgress, ensureDaily, getMissionViews } from '../game/progress';
 import { apiErrorKey, definitelyNotCompleted } from './errors';
-import { GameApiError, getBootstrap, postCompletion, putDraft, SUPPORTED_CONTENT_VERSION } from './game';
+import { demoLogin, demoLogout, GameApiError, getBootstrap, getDemoUsers, postCompletion, putDraft, SUPPORTED_CONTENT_VERSION } from './game';
 
 const today = '2026-11-12';
 const now = new Date(`${today}T10:00:00Z`);
@@ -113,5 +113,69 @@ describe('same-origin game BFF client', () => {
     const options = (fetcher.mock.calls[0] as unknown as [string, RequestInit])[1];
     expect(JSON.parse(options.body as string)).toEqual({ step_index: 1, answers: { customer_type: 'new' } });
     expect(apiErrorKey(new GameApiError(401, 'AUTHENTICATION_REQUIRED', 'auth'))).toBe('connection.errorAuth');
+  });
+
+  it('lists demo visitors from the JSON endpoint and ignores malformed entries', async () => {
+    const fetcher = vi.fn(async () => asJson({ users: [{ id: 'u1', name: '  Visitor   One ' }, { id: 'u2', name: 'Visitor Two' }] }));
+    vi.stubGlobal('fetch', fetcher);
+    expect(await getDemoUsers()).toEqual([{ id: 'u1', label: 'Visitor One' }, { id: 'u2', label: 'Visitor Two' }]);
+    const [path, options] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(path).toBe('/api/v1/game/demo-users');
+    expect(options.credentials).toBe('same-origin');
+    expect(options.cache).toBe('no-store');
+
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ users: [] })));
+    await expect(getDemoUsers()).rejects.toMatchObject({ code: 'DEMO_USERS_UNAVAILABLE' });
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ users: [{ id: '' , name: 'x' }] })));
+    await expect(getDemoUsers()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ error: { code: 'AUTHENTICATION_REQUIRED', message: 'no' } }, 401)));
+    await expect(getDemoUsers()).rejects.toMatchObject({ status: 401, code: 'AUTHENTICATION_REQUIRED' });
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ error: { code: 'HTTP_404', message: 'Demo login is disabled in this environment.' } }, 404)));
+    await expect(getDemoUsers()).rejects.toMatchObject({ status: 404, code: 'DEMO_USERS_UNAVAILABLE' });
+  });
+
+  it('signs in with the JSON login body and confirms the cookie through bootstrap', async () => {
+    const calls: { path: string; options: RequestInit }[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (path: string, options: RequestInit) => {
+      calls.push({ path, options });
+      if (path === '/api/v1/game/demo-login') return asJson({ user: { id: 'u1', name: 'Visitor One' } });
+      return asJson(boot());
+    }));
+    const data = await demoLogin('u1');
+    expect(data.player.id).toBe('user-a');
+    expect(calls.map((call) => call.path)).toEqual(['/api/v1/game/demo-login', '/api/v1/game/bootstrap']);
+    expect(JSON.parse(calls[0].options.body as string)).toEqual({ user_id: 'u1' });
+    expect(calls[0].options.headers).toMatchObject({ Accept: 'application/json', 'Content-Type': 'application/json' });
+    expect(calls[0].options.credentials).toBe('same-origin');
+    expect(calls[0].options.redirect).toBe('error');
+    // No session token or CSRF token is ever written by the client.
+    expect(JSON.stringify(calls)).not.toContain('csrf-from-bootstrap');
+  });
+
+  it('reports disabled demo login, rate limits and cookie failures distinctly', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ error: { code: 'HTTP_404', message: 'Not Found' } }, 404)));
+    await expect(demoLogin('u1')).rejects.toMatchObject({ status: 404, code: 'DEMO_LOGIN_DISABLED' });
+    expect(apiErrorKey(new GameApiError(404, 'DEMO_LOGIN_DISABLED', 'off'))).toBe('connection.demoLoginDisabled');
+    expect(apiErrorKey(new GameApiError(429, 'RATE_LIMITED', 'slow down'))).toBe('connection.errorRateLimited');
+    expect(apiErrorKey(new GameApiError(0, 'DEMO_USERS_UNAVAILABLE', 'none'))).toBe('connection.demoUsersUnavailable');
+
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ error: { code: 'RATE_LIMITED', message: 'Too many demo login attempts' } }, 429)));
+    await expect(demoLogin('u1')).rejects.toMatchObject({ status: 429, code: 'RATE_LIMITED' });
+  });
+
+  it('logs out with only the CSRF header and validates the acknowledgement', async () => {
+    const fetcher = vi.fn(async () => asJson({ logged_out: true }));
+    vi.stubGlobal('fetch', fetcher);
+    expect(await demoLogout('csrf-token')).toBe(true);
+    const [path, options] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(path).toBe('/api/v1/game/logout');
+    expect(options.method).toBe('POST');
+    expect(options.headers).toMatchObject({ 'X-CSRF-Token': 'csrf-token' });
+    expect(options.body).toBeUndefined();
+    expect(options.credentials).toBe('same-origin');
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ logged_out: false })));
+    expect(await demoLogout('csrf-token')).toBe(false);
+    vi.stubGlobal('fetch', vi.fn(async () => asJson({ error: { code: 'Csrf mismatch', message: 'no' } }, 403)));
+    await expect(demoLogout('csrf-token')).rejects.toMatchObject({ status: 403 });
   });
 });

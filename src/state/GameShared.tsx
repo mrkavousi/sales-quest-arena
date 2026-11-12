@@ -22,6 +22,8 @@ export interface GameContextValue {
   switchMode: (mode: GameMode) => void;
   account: { id: string; account_name: string; role: string } | null;
   changeAccount: () => void;
+  /** Server mode only: clear the session cookie and return to the account picker. */
+  signOut: () => Promise<boolean>;
   progress: PlayerProgress;
   todayKey: string;
   /** Server time offset from this device, used for the UTC countdown only. */
