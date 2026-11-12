@@ -1,0 +1,40 @@
+/* Explicitly distinguish the device-only game from server-confirmed progress. */
+.connection-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 12px 16px 0;
+  padding: 9px 13px;
+  border: 2px solid #bbdfcd;
+  border-radius: 15px;
+  background: #effbf4;
+  color: #17643c;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.connection-banner--local { background: #f3f1ff; border-color: #dfdaf7; color: #544493; }
+.connection-banner.is-error { background: #fff1d6; border-color: #ffc163; color: #6b3c00; }
+.connection-banner__actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.connection-banner__actions .linkbtn { padding: 3px 6px; }
+.welcome__card .connection-banner { margin: 0; }
+.connection-gate__body { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.connection-gate__body h1 { font-size: 24px; line-height: 1.3; }
+.connection-gate__body p, .connection-gate__hint { color: var(--ink-2); font-size: 14px; }
+.connection-gate__warning { padding: 10px 12px; border-radius: 12px; background: #fff1d6; color: #6b3c00 !important; font-weight: 800; }
+.connection-gate__error { color: #a12639 !important; font-weight: 800; }
+.connection-gate__field { display: grid; width: 100%; gap: 8px; text-align: start; font-size: 13px; font-weight: 900; color: var(--ink-2); }
+.connection-gate__field select { min-width: 0; }
+.connection-gate__hint { text-align: center; }
+.connection-profile > p { margin: 9px 0; color: var(--ink-2); font-size: 14px; }
+.connection-profile__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.savestate--saving i { background: var(--yellow); box-shadow: 0 0 0 4px rgba(255, 201, 60, 0.25); }
+.connection-start { min-height: 55vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; font-weight: 800; }
+.play__sync { margin: 10px 16px 0; padding: 9px 12px; border-radius: 12px; background: #fff1d6; color: #6b3c00; font-size: 13px; font-weight: 800; }
+.play__sync .linkbtn { padding: 3px 7px; }
+.result__sync { width: 100%; margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: #fff1d6; color: #6b3c00; font-size: 13px; font-weight: 800; }
+.result__sync p + p { margin-top: 5px; }
+.result__sync .linkbtn { padding: 3px 7px; }
+.play__answers.is-busy { pointer-events: none; opacity: .7; }
+.history-more { display: grid; justify-items: center; gap: 10px; margin: 20px 0; color: var(--ink-2); font-size: 13px; }

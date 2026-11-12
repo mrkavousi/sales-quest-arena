@@ -1,5 +1,14 @@
+import type { LevelDef } from './levels';
+
+/** The online copy comes from the versioned BFF bootstrap. */
+export interface GameConfig {
+  rewards: { missionXp: number; missionCoins: number; dailyBonusXp: number; orderBonusXp: number };
+  levels: readonly LevelDef[];
+  history: { maxEntries: number };
+}
+
 /**
- * Tunable game configuration.
+ * Tunable local/offline game configuration.
  * Everything a game designer may want to tweak lives here —
  * later this object can be served by an admin/back-office API.
  */

@@ -2,8 +2,8 @@ import { createInitialProgress, AVATAR_IDS } from './progress';
 import type { PlayerProgress } from './types';
 
 /**
- * Persistence layer. Today: localStorage. Tomorrow: swap these three
- * functions for API calls — nothing else in the app touches storage.
+ * Device-only persistence. Server mode uses a separate async BFF client and
+ * never uploads this progress document or treats its rewards as authoritative.
  *
  * Rule: never pretend a save worked. Every write is read back and verified.
  */

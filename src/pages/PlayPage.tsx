@@ -1,48 +1,52 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MissionGameplay } from '../components/play/MissionGameplay';
 import { MissionResult } from '../components/play/MissionResult';
-import { getMission } from '../game/missions';
-import { localizeMission } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 
-/** /play/:missionId — validates access, opens (or resumes) a run, then hands over to the gameplay. */
+/** Wait for the draft to be acknowledged before opening a server-backed run. */
 export function PlayPage({ missionId }: { missionId: string | null }) {
-  const { startMission, toast } = useGame();
-  const { language, t } = useLanguage();
-  const mission = missionId ? getMission(missionId) : undefined;
-  const localized = useMemo(() => mission ? localizeMission(mission, language) : undefined, [mission, language]);
+  const { missions, startMission, toast } = useGame();
+  const { t } = useLanguage();
+  const mission = missions.find((item) => item.id === missionId);
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (!mission) {
+    let active = true;
+    if (!mission || mission.status === 'locked') {
+      if (mission?.status === 'locked') toast(t('play.locked'), 'warn');
       navigate('/', { replace: true });
-      return;
+      return () => { active = false; };
     }
-    if (!startMission(mission.id)) {
-      toast(t('play.locked'), 'warn');
-      navigate('/', { replace: true });
-      return;
-    }
-    setReady(true);
-  }, [mission, startMission, toast, t]);
+    setFailed(false);
+    void startMission(mission.id).then((started) => {
+      if (!active) return;
+      if (started) setReady(true);
+      else setFailed(true);
+    });
+    return () => { active = false; };
+    // Recheck on a new mission or an explicit retry, not after each draft projection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missionId, startMission, attempt]);
 
-  if (!localized || !ready) return null;
-  return <MissionGameplay mission={localized} />;
+  if (failed) return <div className="connection-start" role="alert"><p>{t('connection.startFailed')}</p><button className="btn btn--green" onClick={() => setAttempt((value) => value + 1)}>{t('connection.retry')}</button><button className="linkbtn" onClick={() => navigate('/')}>{t('history.goArena')}</button></div>;
+  if (!mission || !ready) return <div className="connection-start" role="status">{t('connection.loading')}</div>;
+  return <MissionGameplay mission={mission} />;
 }
 
-/** /result/:entryId — the completion screen, rebuilt from the saved history entry (refresh-safe). */
+/** The last result remains available even if an idempotent replay returned an old snapshot. */
 export function ResultPage({ entryId }: { entryId: string | null }) {
-  const { progress } = useGame();
-  const { language } = useLanguage();
-  const entry = progress.history.find((h) => h.id === entryId);
-  const mission = entry ? getMission(entry.missionId) : undefined;
+  const { progress, missions, lastResult } = useGame();
+  const entry = progress.history.find((item) => item.id === entryId) ?? (lastResult?.id === entryId ? lastResult : undefined);
+  const mission = entry ? missions.find((item) => item.id === entry.missionId) : undefined;
 
   useEffect(() => {
     if (!entry || !mission) navigate('/', { replace: true });
   }, [entry, mission]);
 
   if (!entry || !mission) return null;
-  return <MissionResult entry={entry} mission={localizeMission(mission, language)} />;
+  return <MissionResult entry={entry} mission={mission} />;
 }

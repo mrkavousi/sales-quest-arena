@@ -1,11 +1,11 @@
 import type { CSSProperties } from 'react';
-import type { AchievementDef } from '../game/achievements';
+import type { AchievementMeta } from '../game/achievements';
 import { localizeAchievement } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Icon } from './ui/Icon';
 
 interface AchievementBadgeProps {
-  achievement: AchievementDef;
+  achievement: AchievementMeta;
   unlocked: boolean;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;

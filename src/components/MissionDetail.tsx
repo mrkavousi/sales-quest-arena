@@ -1,6 +1,4 @@
 import type { CSSProperties } from 'react';
-import { GAME_CONFIG } from '../game/config';
-import { CATEGORIES } from '../game/missions';
 import { categoryLabel } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
@@ -18,12 +16,12 @@ interface MissionDetailProps {
 
 /** Mission introduction: illustration, description, time, reward preview and the Start button. */
 export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
-  const { missions, progress } = useGame();
+  const { missions, progress, config, categories } = useGame();
   const { language, t, n } = useLanguage();
   const mission = missions.find((m) => m.id === missionId);
   if (!mission) return null;
 
-  const meta = CATEGORIES[mission.category];
+  const meta = categories[mission.category];
   const locked = mission.status === 'locked';
   const draft = progress.drafts[mission.id];
   const hasOrderBonus = mission.steps.some((s) => s.type === 'choice' && s.options.some((o) => o.flags?.includes('order_received')));
@@ -53,7 +51,7 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
 
         <div className="detail__body">
           <div className="detail__tags">
-            <span className="detail__cat">{categoryLabel(mission.category, language)}</span>
+            <span className="detail__cat">{categoryLabel(mission.category, language, categories)}</span>
             <StatusPill status={mission.status} />
             {dailyBonus && <span className="pill pill--daily">{t('daily.title')}</span>}
           </div>
@@ -69,7 +67,7 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
           <div className="detail__rewards" aria-label={t('detail.rewardPreview')}>
             <div className="rewardchip rewardchip--xp">
               <XpIcon size={30} />
-              <div><b><bdi dir="ltr">+{n(mission.xpReward + (dailyBonus ? GAME_CONFIG.rewards.dailyBonusXp : 0))}</bdi></b><span>{t('common.xp')}</span></div>
+              <div><b><bdi dir="ltr">+{n(mission.xpReward + (dailyBonus ? config.rewards.dailyBonusXp : 0))}</bdi></b><span>{t('common.xp')}</span></div>
             </div>
             <div className="rewardchip rewardchip--coin">
               <CoinIcon size={30} />
@@ -78,12 +76,12 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
           </div>
           {dailyBonus && (
             <p className="detail__hint">
-              <span aria-hidden="true">☀️</span> {t('detail.dailyHint', { xp: GAME_CONFIG.rewards.dailyBonusXp })}
+              <span aria-hidden="true">☀️</span> {t('detail.dailyHint', { xp: config.rewards.dailyBonusXp })}
             </p>
           )}
           {hasOrderBonus && !locked && (
             <p className="detail__hint">
-              <span aria-hidden="true">🛒</span> {t('detail.orderHint', { xp: GAME_CONFIG.rewards.orderBonusXp })}
+              <span aria-hidden="true">🛒</span> {t('detail.orderHint', { xp: config.rewards.orderBonusXp })}
             </p>
           )}
 

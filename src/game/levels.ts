@@ -20,14 +20,14 @@ export interface LevelInfo extends LevelDef {
   isMax: boolean;
 }
 
-export function getLevelDef(level: number): LevelDef {
-  return LEVELS.find((l) => l.level === level) ?? LEVELS[0];
+export function getLevelDef(level: number, levels: readonly LevelDef[] = LEVELS): LevelDef {
+  return levels.find((l) => l.level === level) ?? levels[0];
 }
 
-export function getLevelInfo(xp: number): LevelInfo {
-  let current = LEVELS[0];
-  for (const def of LEVELS) if (xp >= def.minXp) current = def;
-  const next = LEVELS.find((l) => l.level === current.level + 1) ?? null;
+export function getLevelInfo(xp: number, levels: readonly LevelDef[] = LEVELS): LevelInfo {
+  let current = levels[0];
+  for (const def of levels) if (xp >= def.minXp) current = def;
+  const next = levels.find((l) => l.level === current.level + 1) ?? null;
   if (!next) {
     return { ...current, nextMinXp: null, nextTitle: null, xpIntoLevel: xp - current.minXp, xpForLevel: 0, progress: 1, isMax: true };
   }

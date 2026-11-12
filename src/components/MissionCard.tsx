@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { CATEGORIES } from '../game/missions';
+import { useGame } from '../state/GameContext';
 import type { MissionView } from '../game/types';
 import { categoryLabel } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -16,7 +16,8 @@ interface MissionCardProps {
 
 export function MissionCard({ mission, onSelect, index = 0 }: MissionCardProps) {
   const { language, t, n } = useLanguage();
-  const meta = CATEGORIES[mission.category];
+  const { categories } = useGame();
+  const meta = categories[mission.category];
   const locked = mission.status === 'locked';
   return (
     <button
@@ -35,7 +36,7 @@ export function MissionCard({ mission, onSelect, index = 0 }: MissionCardProps) 
       </span>
       <span className="mcard__body">
         <span className="mcard__top">
-          <span className="mcard__cat">{categoryLabel(mission.category, language)}</span>
+          <span className="mcard__cat">{categoryLabel(mission.category, language, categories)}</span>
           <StatusPill status={mission.status} />
         </span>
         <span className="mcard__title">{mission.title}</span>

@@ -1,23 +1,21 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Mascot } from '../components/art/Mascot';
 import { CATEGORY_ICON } from '../components/art/MissionArt';
 import { Stars } from '../components/MissionBits';
 import { CoinIcon, Icon, XpIcon } from '../components/ui/Icon';
 import { toDateKey } from '../game/dates';
-import { CATEGORIES, getMission } from '../game/missions';
 import type { HistoryEntry } from '../game/types';
-import { localizeMission } from '../i18n/content';
-import { formatDayLabel, formatTime } from '../i18n/locale';
+import { formatDayLabel, formatServerDayLabel, formatTime } from '../i18n/locale';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 
 function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
   const { language, t, n } = useLanguage();
-  const original = getMission(entry.missionId);
-  if (!original) return null; // mission was removed from the catalog
-  const mission = localizeMission(original, language);
-  const meta = CATEGORIES[mission.category];
+  const { missions, categories, mode } = useGame();
+  const mission = missions.find((item) => item.id === entry.missionId);
+  if (!mission) return null; // mission was removed from the catalog
+  const meta = categories[mission.category];
   const note = mission.steps.find((s) => s.type === 'note');
   const noteText = note ? entry.answers[note.id] : undefined;
 
@@ -30,7 +28,7 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
       <div className="hcard__body">
         <div className="hcard__top">
           <h3>{mission.title}</h3>
-          <time dateTime={entry.completedAt} dir="auto">{formatTime(language, entry.completedAt)}</time>
+          <time dateTime={entry.completedAt} dir="auto">{formatTime(language, entry.completedAt, mode === 'server' ? 'UTC' : undefined)}</time>
         </div>
         <div className="hcard__answers">
           {mission.steps.map((step) => {
@@ -61,25 +59,48 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
 }
 
 export function HistoryPage() {
-  const { progress, stats } = useGame();
+  const { progress, stats, mode, todayKey, loadHistory } = useGame();
   const { language, t, n } = useLanguage();
+  const [items, setItems] = useState<HistoryEntry[] | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(mode === 'server');
+  useEffect(() => {
+    if (mode !== 'server') return;
+    let active = true;
+    setLoading(true);
+    void loadHistory().then((page) => {
+      if (active && page) { setItems(page.items); setCursor(page.next_cursor); }
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [mode, loadHistory]);
+  const entries = mode === 'server' ? items ?? progress.history : progress.history;
+  const more = async () => {
+    if (!cursor || loading) return;
+    setLoading(true);
+    try {
+      const page = await loadHistory(cursor);
+      if (page) { setItems((previous) => [...(previous ?? []), ...page.items]); setCursor(page.next_cursor); }
+    } finally { setLoading(false); }
+  };
   const groups: { key: string; label: string; entries: HistoryEntry[] }[] = [];
-  for (const entry of progress.history) {
-    const key = toDateKey(new Date(entry.completedAt));
+  for (const entry of entries) {
+    const key = mode === 'server' ? new Date(entry.completedAt).toISOString().slice(0, 10) : toDateKey(new Date(entry.completedAt));
     const last = groups[groups.length - 1];
     if (last && last.key === key) last.entries.push(entry);
-    else groups.push({ key, label: formatDayLabel(language, entry.completedAt), entries: [entry] });
+    else groups.push({ key, label: mode === 'server' ? formatServerDayLabel(language, key, todayKey) : formatDayLabel(language, entry.completedAt), entries: [entry] });
   }
-  const xpFromMissions = progress.history.reduce((sum, h) => sum + h.rewards.xp, 0);
+  const xpFromMissions = entries.reduce((sum, entry) => sum + entry.rewards.xp, 0);
 
   return (
     <div className="pagebody">
       <header className="pagehead">
         <h1>{t('history.title')}</h1>
-        <p>{t('history.subtitle')}</p>
+        <p>{t('history.subtitle')}{mode === 'server' && <> · {t('connection.utc')}</>}</p>
       </header>
 
-      {progress.history.length === 0 ? (
+      {mode === 'server' && items === null && loading ? (
+        <div className="empty" role="status">{t('connection.loading')}</div>
+      ) : entries.length === 0 ? (
         <div className="empty">
           <Mascot size={110} mood="think" />
           <h2>{t('history.emptyTitle')}</h2>
@@ -93,7 +114,7 @@ export function HistoryPage() {
           <div className="summary">
             <div><b>{n(stats.missionsCompleted)}</b><span>{t('nav.missions')}</span></div>
             <div><b>{n(xpFromMissions)}</b><span>{t('history.xpEarned')}</span></div>
-            <div><b>{n(stats.ordersLogged)}</b><span>{t('history.orders')}</span></div>
+            <div><b>{n(entries.filter((entry) => entry.flags.includes('order_received')).length)}</b><span>{t('history.orders')}</span></div>
           </div>
           {groups.map((group) => (
             <section key={group.key} className="hgroup">
@@ -105,6 +126,7 @@ export function HistoryPage() {
               </ul>
             </section>
           ))}
+          {mode === 'server' && (cursor || items === null) && <div className="history-more"><p>{t('connection.historyPartial')}</p>{cursor && <button className="btn btn--ghost" onClick={() => void more()} disabled={loading}>{t(loading ? 'connection.savingAction' : 'connection.historyMore')}</button>}</div>}
         </>
       )}
     </div>

@@ -1,7 +1,9 @@
 # Sales Quest Arena
 
 A small, playable gamification MVP for sales reps and field agents.
-It is a **game** that happens to record real-world sales activities — not a CRM dashboard.
+It is a **game** that happens to record self-reported sales activities — not a CRM dashboard.
+The server integration is a prototype: game XP and coins are sample values, separate
+from organizational points, and an in-game order is not verified sales evidence.
 
 ## Run it
 
@@ -16,7 +18,14 @@ npm run build:standalone   # one self-contained file: standalone/index.html
 npx playwright install chromium
 npm run test:e2e    # English and Persian playthroughs, plus PWA checks
 npm run test:pwa    # builds and tests installability, offline play and updates
+
+# Cross-repository integration test (fresh temporary demo database):
+SQA_BACKEND_DIR=../comu-center SQA_BACKEND_PYTHON=../comu-center/.venv/bin/python npm run test:bff
 ```
+
+The device-only game is the default and needs no backend. To run the server-backed
+demo with the current `iciiex/comu-center` BFF, see [BFF integration](docs/bff-integration.md)
+for setup, same-origin proxy requirements, data boundaries, and security limitations.
 
 Stack: React 18 + TypeScript + Vite. No UI kit, no animation library, no 3D engine —
 animations are CSS plus a ~100-line canvas confetti. Illustrations are original inline SVG.
@@ -25,14 +34,16 @@ animations are CSS plus a ~100-line canvas confetti. Illustrations are original 
 
 Import the GitHub repository into a Vercel project and deploy the branch containing
 these changes. `vercel.json` configures the Vite build (`npm ci`, `npm run build`,
-output directory `dist`); no environment variables or backend are required. The app
-uses hash-based navigation, so it does not need a catch-all rewrite. Vercel normally
-uses the configured production branch for the production URL and other branches for
-preview deployments.
+output directory `dist`); the default device-only game requires no backend. Hash-based
+navigation does not need a catch-all rewrite. Vercel normally uses the configured
+production branch for the production URL and other branches for previews.
 
-Game progress and the language preference are stored in the browser, scoped to the
-site's origin. They do not automatically transfer between localhost, a Vercel preview
-URL, and the production URL, or between different devices.
+**The Vercel configuration does not provide a backend proxy.** Server mode works only
+when an explicitly configured same-origin reverse proxy routes the API and demo-login
+paths to a compatible backend. Do not expose the demo login publicly; see the
+[deployment and security notes](docs/bff-integration.md#deployment-and-security).
+Device-only progress and the language preference remain scoped to the site's origin;
+server progress belongs to the signed-in demo account and is separate.
 
 ## Install and play offline
 
@@ -43,10 +54,17 @@ open it in Safari, tap **Share** → **Add to Home Screen** → **Add**. Browser
 versions can use slightly different menu labels. Installation is available on HTTPS
 or localhost, not when opening the standalone HTML file directly.
 
-After the first online visit completes and the service worker has cached the app,
-the game, translations, fonts and icons work offline. Progress stays on the device;
+After the first complete online visit, the cached shell, translations, fonts and
+icons support the **device-only** game offline. Its progress stays on the device;
 clearing site/app storage or uninstalling may delete it, and some platforms keep an
-installed app's storage separate from a browser tab. There is no cloud sync or backup.
+installed app's storage separate from a browser tab. There is no automatic import,
+cloud sync, or backup of that local game.
+
+**Server mode requires a connection** for profile, draft and completion writes. No
+server-mode offline queue or automatic synchronization exists. When a completion
+response is lost, a per-account retry record allows the player to explicitly retry
+the exact same request; it is not a confirmed reward. API and login responses are
+network-only and never cached by the service worker.
 
 A new release is downloaded in the background and waits until the player chooses to
 update or closes the old app. The update notice is postponed during a mission. The
@@ -70,7 +88,10 @@ Chromium and simulates Android/iOS install flows and a safe update.
 Five more missions (one per remaining category) are defined as data and unlock one after
 another, so the map keeps going after the first win. They reuse the same three step types.
 
-### Game rules (all in `src/game/config.ts`)
+### Sample game rules (not approved business policy)
+
+Device-only mode uses `src/game/config.ts`; server mode uses the versioned config
+received from the BFF. These values do not create organizational points.
 
 - Mission complete: **100 XP + 20 coins**
 - Daily challenge: **+50 XP** (once per day)
@@ -92,13 +113,15 @@ src/
     achievements.ts     Badge definitions and conditions
     progress.ts         Derived state: mission status, streak, daily challenge, stats
     completeMission.ts  (progress, mission, answers, time) → new progress + history entry
-    storage.ts          Persistence adapter (localStorage, verified writes)
-    engine.test.ts      Unit tests
+    storage.ts          Device-only persistence (localStorage, verified writes)
+    engine.test.ts      Local rules unit tests
+  api/                  Same-origin BFF client, error handling and completion retry records
   i18n/                 English/Persian UI strings, translated game content and locale helpers
     LanguageContext.tsx Language preference, document language and direction
     locale.test.ts      Translation coverage, formatting and save-compatibility tests
   pwa/PwaContext.tsx    Install prompt, service-worker registration and update handling
-  state/GameContext.tsx Single store; one `commit()` path that updates memory and saves
+  state/GameContext.tsx Device-only store and explicit mode selection
+  state/ServerGameContext.tsx Async bootstrap, ordered writes and server projections
   router.ts             Tiny hash router
   components/           PlayerHeader, MissionMap, MissionCard, MissionDetail, DailyChallenge,
                         PlayerProgress, AchievementBadge, AppLayout
@@ -109,15 +132,20 @@ src/
   styles/               tokens.css (design system) + one stylesheet per area
 ```
 
-Mission **status** (Locked / Available / In Progress / Completed) is never stored — it is
-derived from the player's progress, so it cannot drift out of sync.
+In device-only mode, mission status and rewards are calculated locally. In server
+mode, the BFF owns the catalog, mission status, rewards, progress and UTC `date_key`;
+the browser sends answers only and displays server-returned projections.
 
 ### Persistence
 
-Progress lives in `localStorage` under `sales-quest-arena:progress:v1`.
-Every write is read back and verified. If the browser blocks storage (private mode,
-sandboxed embeds) the game still runs and shows a clear "progress is not being saved"
-banner instead of pretending.
+The old device-only save remains in `localStorage` under
+`sales-quest-arena:progress:v1`. It is neither deleted nor imported as server XP.
+Verified local writes report a warning when storage is unavailable. A separate mode
+preference selects the device-only or server game. Server mode keeps a single
+per-account completion retry record (answers and idempotency key, **no session
+or CSRF token**) so an ambiguous response can be retried explicitly. Clearing browser
+storage removes that recovery record; check server history before starting a new run
+if a prior result was uncertain. Full details are in [BFF integration](docs/bff-integration.md).
 
 ### Languages
 
@@ -134,7 +162,7 @@ player's own notes. Older English saves continue to work.
 
 ## Extending it
 
-**Add a mission** — append an object to `MISSIONS` in `src/game/missions.ts`:
+**Add a local-only mission** — append an object to `MISSIONS` in `src/game/missions.ts`:
 
 ```ts
 {
@@ -154,7 +182,9 @@ player's own notes. Older English saves continue to work.
 It appears on the map and in the list, and is playable, with no UI changes. Add its
 Persian title, description, and step/option copy keyed by ID to `PERSIAN_MISSIONS` in
 `src/i18n/content.ts`. The localization tests check that built-in content is complete.
-Unknown content falls back to its original text rather than affecting gameplay.
+Unknown content falls back to its original text rather than affecting gameplay. In
+server mode, update the backend catalog, its content version, client compatibility
+check and contract tests together; changing this local array does not change the BFF.
 
 **Add a reward rule** — append to `REWARD_RULES` in `src/game/rewards.ts` and translate its ID in `PERSIAN_REWARDS`.
 **Add a badge** — append to `ACHIEVEMENTS` in `src/game/achievements.ts` and translate its ID in `PERSIAN_ACHIEVEMENTS`.
@@ -163,8 +193,8 @@ Unknown content falls back to its original text rather than affecting gameplay.
 
 ## Not built yet (Phase 3)
 
-- Backend: replace the three functions in `storage.ts` with API calls and run
-  `completeMission()` on the server to validate results.
+- Production authentication and a production-safe same-origin BFF deployment
+- Server-mode offline write queue or automatic sync; migration of old local XP
 - Real sales data (CRM visits/orders completing missions automatically)
 - Team competitions and leaderboards
 - Admin mission configuration (serve `MISSIONS` and `GAME_CONFIG` from an API)

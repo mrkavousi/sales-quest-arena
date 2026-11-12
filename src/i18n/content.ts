@@ -1,7 +1,6 @@
-import type { AchievementDef } from '../game/achievements';
-import { getLevelDef } from '../game/levels';
-import { CATEGORIES, DIFFICULTY, getMission } from '../game/missions';
-import { getLockRequirement } from '../game/progress';
+import type { AchievementMeta } from '../game/achievements';
+import { getLevelDef, type LevelDef } from '../game/levels';
+import { CATEGORIES, DIFFICULTY, getMission, type CategoryMeta } from '../game/missions';
 import type { Mission, MissionCategory, MissionDifficulty, MissionStep, MissionView, PlayerProgress, RewardLine } from '../game/types';
 import { translate, type Language } from './locale';
 
@@ -303,33 +302,34 @@ export function localizeMission<T extends Mission>(mission: T, language: Languag
   };
 }
 
-export function localizeMissionView(view: MissionView, progress: PlayerProgress, language: Language): MissionView {
+export function localizeMissionView(view: MissionView, progress: PlayerProgress, language: Language, catalog?: readonly Mission[]): MissionView {
   const localized = localizeMission(view, language);
   if (language === 'en' || !view.lockReason) return localized;
-  const requirement = getLockRequirement(view, progress);
-  if (requirement?.type === 'mission') {
-    const requiredMission = getMission(requirement.missionId);
-    return { ...localized, lockReason: translate(language, 'missions.lockMission', { mission: requiredMission ? localizeMission(requiredMission, language).title : requirement.missionId }) };
+  // Translate the server's locked status without recomputing whether it is locked.
+  const after = view.unlock.afterMission;
+  if (after && !(progress.missions[after]?.completions > 0)) {
+    const requiredMission = catalog?.find((item) => item.id === after) ?? getMission(after);
+    return { ...localized, lockReason: translate(language, 'missions.lockMission', { mission: requiredMission ? localizeMission(requiredMission, language).title : after }) };
   }
-  if (requirement?.type === 'level') {
-    return { ...localized, lockReason: translate(language, 'missions.lockLevel', { level: requirement.level }) };
+  if (view.unlock.minLevel) {
+    return { ...localized, lockReason: translate(language, 'missions.lockLevel', { level: view.unlock.minLevel }) };
   }
   return localized;
 }
 
-export function categoryLabel(category: MissionCategory, language: Language): string {
-  return language === 'fa' ? PERSIAN_CATEGORIES[category] : CATEGORIES[category].label;
+export function categoryLabel(category: MissionCategory, language: Language, categories: Record<MissionCategory, CategoryMeta> = CATEGORIES): string {
+  return language === 'fa' ? PERSIAN_CATEGORIES[category] ?? categories[category].label : categories[category].label;
 }
 
-export function difficultyLabel(difficulty: MissionDifficulty, language: Language): string {
-  return language === 'fa' ? PERSIAN_DIFFICULTIES[difficulty] : DIFFICULTY[difficulty].label;
+export function difficultyLabel(difficulty: MissionDifficulty, language: Language, difficulties: Record<MissionDifficulty, { label: string; dots: number }> = DIFFICULTY): string {
+  return language === 'fa' ? PERSIAN_DIFFICULTIES[difficulty] ?? difficulties[difficulty].label : difficulties[difficulty].label;
 }
 
-export function levelTitle(level: number, language: Language): string {
-  return language === 'fa' ? PERSIAN_LEVELS[level] ?? getLevelDef(level).title : getLevelDef(level).title;
+export function levelTitle(level: number, language: Language, levels?: readonly LevelDef[]): string {
+  return language === 'fa' ? PERSIAN_LEVELS[level] ?? getLevelDef(level, levels).title : getLevelDef(level, levels).title;
 }
 
-export function localizeAchievement(achievement: AchievementDef, language: Language): AchievementDef {
+export function localizeAchievement<T extends AchievementMeta>(achievement: T, language: Language): T {
   const copy = language === 'fa' ? PERSIAN_ACHIEVEMENTS[achievement.id] : undefined;
   return copy ? { ...achievement, ...copy } : achievement;
 }

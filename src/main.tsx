@@ -10,6 +10,7 @@ import './styles/pages.css';
 import './styles/play.css';
 import './styles/i18n.css';
 import './styles/pwa.css';
+import './styles/connection.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

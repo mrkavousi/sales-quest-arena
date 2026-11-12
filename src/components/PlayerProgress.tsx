@@ -1,4 +1,3 @@
-import { ACHIEVEMENTS } from '../game/achievements';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
@@ -20,9 +19,9 @@ function StatTile({ value, label, tone, children }: { value: number; label: stri
 
 /** Player progress summary: totals, streak and achievement badges. */
 export function PlayerProgress() {
-  const { progress, stats } = useGame();
+  const { progress, stats, achievements } = useGame();
   const { t, n } = useLanguage();
-  const sorted = [...ACHIEVEMENTS].sort((a, b) => Number(!!progress.achievements[b.id]) - Number(!!progress.achievements[a.id]));
+  const sorted = [...achievements].sort((a, b) => Number(!!progress.achievements[b.id]) - Number(!!progress.achievements[a.id]));
 
   return (
     <section className="panel progress" aria-label={t('progress.title')}>
@@ -43,7 +42,7 @@ export function PlayerProgress() {
 
       <header className="panel__head panel__head--sub">
         <h3>
-          {t('progress.badges')} <span className="panel__count"><bdi dir="ltr">{n(stats.achievements)}/{n(ACHIEVEMENTS.length)}</bdi></span>
+          {t('progress.badges')} <span className="panel__count"><bdi dir="ltr">{n(stats.achievements)}/{n(achievements.length)}</bdi></span>
         </h3>
         <button className="linkbtn" onClick={() => navigate('/profile')}>
           {t('progress.seeAll')}

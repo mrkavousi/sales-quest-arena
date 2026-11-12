@@ -7,6 +7,14 @@ import { pwaBuild } from './scripts/pwa-build.mjs';
 // `npm run build:standalone` -> standalone/index.html (one self-contained file)
 export default defineConfig(({ mode }) => {
   const standalone = mode === 'standalone';
+  // Development/preview-only reverse proxy. Browser requests stay same-origin;
+  // the backend address is never embedded in the client bundle.
+  const target = process.env.GAME_BFF_TARGET;
+  const proxy = target ? {
+    '/api/v1/game': { target, changeOrigin: true },
+    '/login': { target, changeOrigin: true },
+    '/demo-login': { target, changeOrigin: true },
+  } : undefined;
   return {
     base: './',
     plugins: [react(), ...(standalone ? [viteSingleFile()] : [pwaBuild()])],
@@ -15,7 +23,7 @@ export default defineConfig(({ mode }) => {
       copyPublicDir: !standalone,
       assetsInlineLimit: standalone ? 100_000_000 : 4096,
     },
-    server: { host: '0.0.0.0', port: 5173, allowedHosts: true as const },
-    preview: { host: '0.0.0.0', port: 4173, allowedHosts: true as const },
+    server: { host: '0.0.0.0', port: 5173, allowedHosts: true as const, proxy },
+    preview: { host: '0.0.0.0', port: 4173, allowedHosts: true as const, proxy },
   };
 });

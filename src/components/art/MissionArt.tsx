@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { CATEGORIES } from '../../game/missions';
+import { useGame } from '../../state/GameContext';
 import type { MissionCategory } from '../../game/types';
 import type { IconName } from '../ui/Icon';
 
@@ -155,7 +155,8 @@ interface MissionArtProps {
 }
 
 export function MissionArt({ category, className, locked = false }: MissionArtProps) {
-  const meta = CATEGORIES[category];
+  const { categories } = useGame();
+  const meta = categories[category];
   const gid = useId().replace(/:/g, '');
   return (
     <svg className={`mission-art ${locked ? 'is-locked' : ''} ${className ?? ''}`} viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">

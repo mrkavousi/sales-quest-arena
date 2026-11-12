@@ -30,14 +30,21 @@ export function Logo() {
 }
 
 export function StorageBanner() {
-  const { persistence } = useGame();
+  const { mode, account, persistence, contractError, refresh, changeAccount } = useGame();
   const { t } = useLanguage();
-  if (persistence === 'saved') return null;
-  return (
-    <div className="storage-banner" role="alert">
-      <b>{t('storage.warning')}</b>{' '}
-      {t(persistence === 'unavailable' ? 'storage.unavailable' : 'storage.error')}
+  const hasError = persistence === 'error' || contractError !== null;
+  if (mode === 'server') return (
+    <div className={`connection-banner${hasError ? ' is-error' : ''}`} role={hasError ? 'alert' : 'status'}>
+      <div><b>{t('connection.serverBadge')}</b> · <bdi>{account?.account_name}</bdi></div>
+      <span>{contractError ? <>{t(contractError === 'UNSUPPORTED_VERSION' ? 'connection.errorVersion' : 'connection.errorResponse')} {t('connection.compatibilityPaused')}</> : t(persistence === 'saving' ? 'connection.saving' : persistence === 'saved' ? 'connection.saved' : 'connection.notSaved')}</span>
+      {hasError && <div className="connection-banner__actions"><button className="linkbtn" onClick={() => void refresh()}>{t('connection.retry')}</button><button className="linkbtn" onClick={changeAccount}>{t('connection.switchAccount')}</button></div>}
     </div>
+  );
+  return (
+    <>
+      <div className="connection-banner connection-banner--local"><b>{t('connection.localBadge')}</b></div>
+      {persistence !== 'saved' && <div className="storage-banner" role="alert"><b>{t('storage.warning')}</b>{' '}{t(persistence === 'unavailable' ? 'storage.unavailable' : 'storage.error')}</div>}
+    </>
   );
 }
 
