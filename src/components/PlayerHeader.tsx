@@ -11,25 +11,26 @@ import { useAnimatedNumber } from './ui/motion';
 import { ProgressBar, ProgressRing } from './ui/Progress';
 
 /** Totals last shown to the player in this session — lets the HUD count up after a mission. */
-let lastShown: { xp: number; coins: number } | null = null;
+let lastShown: { owner: string; xp: number; coins: number } | null = null;
 
 export function resetHeaderMemory(): void {
   lastShown = null;
 }
 
 export function PlayerHeader() {
-  const { progress, stats, todayKey } = useGame();
+  const { progress, stats, todayKey, config, mode, account } = useGame();
   const { language, t, n } = useLanguage();
-  const from = lastShown ?? { xp: progress.xp, coins: progress.coins };
+  const owner = mode === 'server' ? `server:${account?.id ?? ''}` : 'local';
+  const from = lastShown?.owner === owner ? lastShown : { xp: progress.xp, coins: progress.coins };
   const xp = useAnimatedNumber(progress.xp, { from: Math.min(from.xp, progress.xp), duration: 1300, delay: 450 });
   const coins = useAnimatedNumber(progress.coins, { from: Math.min(from.coins, progress.coins), duration: 1100, delay: 450 });
 
   useEffect(() => {
-    lastShown = { xp: progress.xp, coins: progress.coins };
-  }, [progress.xp, progress.coins]);
+    lastShown = { owner, xp: progress.xp, coins: progress.coins };
+  }, [owner, progress.xp, progress.coins]);
 
   // The whole HUD follows the animated XP, so the bar and level title "catch up" together.
-  const level = getLevelInfo(xp);
+  const level = getLevelInfo(xp, config.levels);
   const counting = xp !== progress.xp || coins !== progress.coins;
   const streakSafe = isStreakSafeToday(progress, todayKey);
 
@@ -50,7 +51,7 @@ export function PlayerHeader() {
           <span className="hud__hello">{t('hud.welcomeBack')}</span>
           <span className="hud__name"><bdi>{progress.player.name}</bdi></span>
           <span className="hud__title">
-            {t('common.levelTitle', { level: level.level, title: levelTitle(level.level, language) })}
+            {t('common.levelTitle', { level: level.level, title: levelTitle(level.level, language, config.levels) })}
           </span>
         </div>
 
@@ -68,7 +69,7 @@ export function PlayerHeader() {
 
       <div className="hud__xp">
         <div className="hud__xp-top">
-          <span className="hud__xp-label">{level.isMax ? t('common.maxLevel') : t('common.xpToNext', { xp: level.nextMinXp! - xp, title: levelTitle(level.level + 1, language) })}</span>
+          <span className="hud__xp-label">{level.isMax ? t('common.maxLevel') : t('common.xpToNext', { xp: level.nextMinXp! - xp, title: levelTitle(level.level + 1, language, config.levels) })}</span>
           <span className="hud__xp-num">
             <bdi dir="ltr"><b>{n(xp)}</b>{level.isMax ? '' : ` / ${n(level.nextMinXp!)}`}</bdi> {t('common.xp')}
           </span>

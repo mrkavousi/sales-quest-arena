@@ -20,6 +20,11 @@ export function msUntilMidnight(now: Date): number {
   return next.getTime() - now.getTime();
 }
 
+/** Countdown for the BFF's UTC day; never select a new day without a server response. */
+export function msUntilServerDayEnds(dateKey: string, serverNowMs: number): number {
+  return Math.max(0, Date.parse(`${dateKey}T00:00:00Z`) + 86_400_000 - serverNowMs);
+}
+
 export function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(total / 3600);

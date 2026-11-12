@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { CATEGORIES } from '../game/missions';
+import { useGame } from '../state/GameContext';
 import type { MissionView } from '../game/types';
 import { useLanguage } from '../i18n/LanguageContext';
 import { Mascot } from './art/Mascot';
@@ -32,6 +32,7 @@ interface MissionMapProps {
 
 export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
   const { t, n } = useLanguage();
+  const { categories } = useGame();
   const done = missions.filter((m) => m.completions > 0).length;
   const chestY = nodeY(missions.length - 1) + ROW_H - 6;
   const height = chestY + 130;
@@ -93,7 +94,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
         })}
 
         {missions.map((m, i) => {
-          const meta = CATEGORIES[m.category];
+          const meta = categories[m.category];
           const isActive = m.id === activeId;
           const x = nodeX(i);
           const mascotRight = x <= 160;

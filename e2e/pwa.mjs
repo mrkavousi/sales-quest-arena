@@ -36,6 +36,7 @@ const server = createServer(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', types[extname(name)] ?? 'application/octet-stream');
   if (name === failingAsset) { res.writeHead(503).end('temporary failure'); return; }
+  if (name === 'api/v1/game/test') { res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"private":true}'); return; }
   if (name === markerAsset) { res.writeHead(200).end('old tab asset'); return; }
   if (name === 'sw.js') {
     let script = workerTemplate.replace(/const CACHE_REVISION = '[^']+';/, `const CACHE_REVISION = 'test-${revision}';`);
@@ -59,10 +60,11 @@ await new Promise((ok, fail) => {
 const url = `http://localhost:${server.address().port}/`;
 const browser = await chromium.launch({ executablePath: process.env.SQA_CHROMIUM_PATH || undefined });
 const problems = [];
+let expectingOfflineApiError = false;
 const observe = (page) => {
   page.on('pageerror', (error) => problems.push(error.message));
   page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(message.text());
+    if (message.type() === 'error' && !(expectingOfflineApiError && message.text().includes('ERR_INTERNET_DISCONNECTED'))) problems.push(message.text());
   });
 };
 const suppressNativePrompt = (context) => context.addInitScript(() => {
@@ -87,6 +89,12 @@ try {
   await page.goto(url);
   await page.waitForSelector('.welcome__card');
   await waitForController(page);
+  const networkOnly = await page.evaluate(async () => {
+    const response = await fetch('/api/v1/game/test');
+    const cached = await caches.match('/api/v1/game/test');
+    return { status: response.status, cached: !!cached };
+  });
+  assert.deepEqual(networkOnly, { status: 200, cached: false }, 'personalized API paths must never enter Cache Storage');
   assert.equal(await page.locator('html').getAttribute('dir'), 'rtl');
   await page.setViewportSize({ width: 320, height: 700 });
   await assertNoOverflow(page);
@@ -121,6 +129,12 @@ try {
   const offlineResponses = [];
   page.on('response', (response) => { if (response.fromServiceWorker()) offlineResponses.push(new URL(response.url()).pathname); });
   await android.setOffline(true);
+  expectingOfflineApiError = true;
+  const apiUnavailableOffline = await page.evaluate(async () => {
+    try { await fetch('/api/v1/game/test'); return false; } catch { return true; }
+  });
+  expectingOfflineApiError = false;
+  assert.equal(apiUnavailableOffline, true, 'server responses are never replayed from the PWA cache offline');
   const offlineLoad = await page.reload();
   assert.equal(offlineLoad.fromServiceWorker(), true);
   await page.waitForSelector('.welcome__card');

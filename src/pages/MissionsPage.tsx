@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { MissionCard } from '../components/MissionCard';
 import { MissionDetail } from '../components/MissionDetail';
-import { CATEGORIES } from '../game/missions';
 import { categoryLabel } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { MissionCategory, MissionStatus } from '../game/types';
@@ -11,7 +10,7 @@ type Filter = 'all' | MissionCategory;
 const ORDER: Record<MissionStatus, number> = { in_progress: 0, available: 1, completed: 2, locked: 3 };
 
 export function MissionsPage() {
-  const { missions } = useGame();
+  const { missions, categories: categoryMeta } = useGame();
   const { language, t } = useLanguage();
   const [filter, setFilter] = useState<Filter>('all');
   const [selected, setSelected] = useState<string | null>(null);
@@ -37,8 +36,8 @@ export function MissionsPage() {
         </button>
         {categories.map((c) => (
           <button key={c} role="tab" aria-selected={filter === c} className={`filter${filter === c ? ' is-active' : ''}`} onClick={() => setFilter(c)}>
-            <i style={{ background: CATEGORIES[c].color }} />
-            {categoryLabel(c, language)}
+            <i style={{ background: categoryMeta[c].color }} />
+            {categoryLabel(c, language, categoryMeta)}
           </button>
         ))}
       </div>

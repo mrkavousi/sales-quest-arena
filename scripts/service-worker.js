@@ -55,6 +55,8 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
+  // Session and personalized BFF responses are always network-only, never in Cache Storage.
+  if (url.pathname.startsWith('/api/') || url.pathname === '/login' || url.pathname === '/demo-login' || url.pathname === '/logout') return;
 
   if (request.mode === 'navigate') {
     // The game uses hash routes. Don't hijack other paths on the same origin.

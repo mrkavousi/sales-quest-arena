@@ -44,8 +44,16 @@ export function formatCountdown(language: Language, ms: number): string {
     : translate(language, 'countdown.minutes', { minutes, seconds: pad(seconds) });
 }
 
-export function formatTime(language: Language, iso: string): string {
-  return new Date(iso).toLocaleTimeString(language === 'fa' ? 'fa-IR-u-nu-arabext' : 'en', { hour: '2-digit', minute: '2-digit' });
+export function formatTime(language: Language, iso: string, timeZone?: string): string {
+  return new Date(iso).toLocaleTimeString(language === 'fa' ? 'fa-IR-u-nu-arabext' : 'en', { hour: '2-digit', minute: '2-digit', timeZone });
+}
+
+/** Server-mode history uses the same UTC day and date_key as the BFF. */
+export function formatServerDayLabel(language: Language, key: string, todayKey: string): string {
+  const diff = daysBetween(key, todayKey);
+  if (diff === 0) return translate(language, 'date.today');
+  if (diff === 1) return translate(language, 'date.yesterday');
+  return new Date(`${key}T12:00:00Z`).toLocaleDateString(language === 'fa' ? 'fa-IR-u-ca-persian-nu-arabext' : 'en', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 /** Local calendar day comparison; older Persian dates use the Persian calendar. */

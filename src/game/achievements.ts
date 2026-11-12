@@ -2,13 +2,16 @@ import { getLevelInfo } from './levels';
 import { MISSIONS } from './missions';
 import type { PlayerProgress } from './types';
 
-export interface AchievementDef {
+export interface AchievementMeta {
   id: string;
   title: string;
   description: string;
   emoji: string;
   /** Badge colors [light, dark]. */
   colors: [string, string];
+}
+
+export interface AchievementDef extends AchievementMeta {
   isUnlocked: (p: PlayerProgress) => boolean;
   /** Optional counter shown on locked badges. */
   progress?: (p: PlayerProgress) => { current: number; target: number };

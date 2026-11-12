@@ -23,9 +23,8 @@ function makeId(now: Date): string {
 }
 
 /**
- * The one place where a mission run turns into rewards.
- * Pure function: (progress, mission, answers, time) -> new progress + history entry.
- * A backend can run the exact same function to validate client results.
+ * Device-only reward engine: (progress, mission, answers, time) -> progress + entry.
+ * Server mode never calls this function; it submits answers to the BFF instead.
  */
 export function completeMission(
   current: PlayerProgress,

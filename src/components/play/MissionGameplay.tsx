@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react';
-import { CATEGORIES, isStepAnswered, isStepRequired } from '../../game/missions';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { isStepAnswered, isStepRequired } from '../../game/missions';
 import type { Answers, AnswerValue, Mission, MissionDraft } from '../../game/types';
 import { keyboardDigit } from '../../i18n/locale';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -32,15 +32,16 @@ function moodFor(mission: Mission, index: number, answers: Answers): MascotMood 
 }
 
 export function MissionGameplay({ mission }: { mission: Mission }) {
-  const { progress, saveDraft, discardDraft, finishMission } = useGame();
+  const { progress, mode, categories, persistence, sessionChanged, contractError, saveDraft, flushDraft, discardDraft, finishMission } = useGame();
   const { t, n } = useLanguage();
   const [answers, setAnswers] = useState<Answers>(() => progress.drafts[mission.id]?.answers ?? {});
   const [index, setIndex] = useState(() => resumeIndex(mission, progress.drafts[mission.id]));
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
   const [pauseOpen, setPauseOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const actionLock = useRef(false);
 
-  const meta = CATEGORIES[mission.category];
+  const meta = categories[mission.category];
   const total = mission.steps.length;
   const step = mission.steps[index];
   const isLast = index === total - 1;
@@ -50,6 +51,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
 
   const setAnswer = useCallback(
     (value: AnswerValue) => {
+      if (actionLock.current) return;
       const next = { ...answers, [step.id]: value };
       setAnswers(next);
       saveDraft(mission.id, index, next);
@@ -66,14 +68,16 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
       saveDraft(mission.id, index + 1, answers);
       return;
     }
+    if (actionLock.current) return;
+    actionLock.current = true;
     setFinishing(true);
-    const entry = finishMission(mission.id, answers);
-    if (entry) navigate(`/result/${entry.id}`, { replace: true });
-    else setFinishing(false);
+    void finishMission(mission.id, answers).then((entry) => {
+      if (entry) navigate(`/result/${entry.id}`, { replace: true });
+    }).finally(() => { actionLock.current = false; setFinishing(false); });
   }, [answers, canContinue, finishMission, index, isLast, mission.id, saveDraft]);
 
   const goBack = useCallback(() => {
-    if (index === 0) return;
+    if (index === 0 || actionLock.current) return;
     setDirection('back');
     setIndex(index - 1);
     saveDraft(mission.id, index - 1, answers);
@@ -82,7 +86,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
   // Keyboard: 1-9 picks an option / star, Enter continues.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (pauseOpen || e.target instanceof HTMLTextAreaElement) return;
+      if (pauseOpen || actionLock.current || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
         goNext();
@@ -102,8 +106,14 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
   return (
     <div className="play" style={{ '--c': meta.color, '--d': meta.dark, '--soft': meta.soft } as CSSProperties}>
       <div className="play__stage">
+        {mode === 'server' && (persistence !== 'saved' || contractError) && (
+          <div className="play__sync" role="status">
+            {contractError ? <>{t(contractError === 'UNSUPPORTED_VERSION' ? 'connection.errorVersion' : 'connection.errorResponse')} {t('connection.compatibilityPaused')}</> : t(persistence === 'saving' ? 'connection.saving' : sessionChanged ? 'connection.sessionChangedUnsaved' : 'connection.notSaved')}
+            {(persistence !== 'saving' || contractError) && <button className="linkbtn" onClick={() => void flushDraft()}>{t('connection.retry')}</button>}
+          </div>
+        )}
         <header className="play__top">
-          <button className="iconbtn" onClick={() => setPauseOpen(true)} aria-label={t('play.pause')}>
+          <button className="iconbtn" onClick={() => setPauseOpen(true)} disabled={finishing} aria-label={t('play.pause')}>
             <Icon name="close" size={22} />
           </button>
           <div className="play__progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index + (answered ? 1 : 0)} aria-label={t('common.missionProgress')}>
@@ -130,12 +140,14 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
               {step.helper && <p className="ask__helper">{step.helper}</p>}
             </div>
           </div>
-          <MissionStep step={step} value={answers[step.id]} onChange={setAnswer} />
+          <div className={finishing ? 'play__answers is-busy' : 'play__answers'} aria-disabled={finishing}>
+            <MissionStep step={step} value={answers[step.id]} onChange={setAnswer} />
+          </div>
         </main>
 
         <footer className="play__foot">
           {index > 0 && (
-            <button className="btn btn--ghost btn--square" onClick={goBack} aria-label={t('play.previous')}>
+            <button className="btn btn--ghost btn--square" onClick={goBack} disabled={finishing} aria-label={t('play.previous')}>
               <Icon name="back" size={24} />
             </button>
           )}
@@ -150,22 +162,30 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
         <div className="confirm">
           <Mascot size={84} mood="idle" />
           <h2>{t('play.breakTitle')}</h2>
-          <p>{t('play.breakDescription')}</p>
+          <p>{t(mode === 'server' ? 'connection.pauseDescription' : 'play.breakDescription')}</p>
           <div className="pause__language">
             <span>{t('language.label')}</span>
             <LanguageSwitcher />
           </div>
-          <button className="btn btn--green btn--block" onClick={() => setPauseOpen(false)}>
+          <button className="btn btn--green btn--block" onClick={() => setPauseOpen(false)} disabled={finishing}>
             {t('play.keepPlaying')}
           </button>
-          <button className="btn btn--ghost btn--block" onClick={() => navigate('/')}>
+          <button className="btn btn--ghost btn--block" disabled={finishing} onClick={() => {
+            if (actionLock.current) return;
+            actionLock.current = true;
+            setFinishing(true);
+            void flushDraft().then((saved) => { if (saved) navigate('/'); }).finally(() => { actionLock.current = false; setFinishing(false); });
+          }}>
             {t('play.saveExit')}
           </button>
           <button
             className="linkbtn linkbtn--danger"
+            disabled={finishing}
             onClick={() => {
-              discardDraft(mission.id);
-              navigate('/');
+              if (actionLock.current) return;
+              actionLock.current = true;
+              setFinishing(true);
+              void discardDraft(mission.id, index, answers).then((deleted) => { if (deleted) navigate('/'); }).finally(() => { actionLock.current = false; setFinishing(false); });
             }}
           >
             {t('play.discard')}

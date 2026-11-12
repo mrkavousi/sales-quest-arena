@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GAME_CONFIG } from '../game/config';
-import { msUntilMidnight } from '../game/dates';
-import { CATEGORIES } from '../game/missions';
+import { msUntilMidnight, msUntilServerDayEnds } from '../game/dates';
 import { formatCountdown } from '../i18n/locale';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useGame } from '../state/GameContext';
@@ -10,22 +8,30 @@ import { Icon, XpIcon } from './ui/Icon';
 
 function useCountdown(): string {
   const { language } = useLanguage();
-  const [ms, setMs] = useState(() => msUntilMidnight(new Date()));
+  const { mode, todayKey, serverClockOffset } = useGame();
+  const remaining = () => mode === 'server'
+    ? msUntilServerDayEnds(todayKey, Date.now() + serverClockOffset)
+    : msUntilMidnight(new Date());
+  const [ms, setMs] = useState(remaining);
   useEffect(() => {
-    const timer = window.setInterval(() => setMs(msUntilMidnight(new Date())), 1000);
+    const update = () => setMs(remaining());
+    update();
+    const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
-  }, []);
+    // The UTC day is changed only by a fresh server response.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, todayKey, serverClockOffset]);
   return formatCountdown(language, ms);
 }
 
 export function DailyChallenge({ onOpen }: { onOpen: (missionId: string) => void }) {
-  const { missions } = useGame();
+  const { missions, categories, config, mode } = useGame();
   const { t } = useLanguage();
   const countdown = useCountdown();
   const mission = missions.find((m) => m.isDaily);
   if (!mission) return null;
   const done = mission.dailyDone;
-  const meta = CATEGORIES[mission.category];
+  const meta = categories[mission.category];
 
   return (
     <section className={`daily${done ? ' is-done' : ''}`} aria-label={t('daily.title')}>
@@ -41,11 +47,11 @@ export function DailyChallenge({ onOpen }: { onOpen: (missionId: string) => void
         <div className="daily__meta">
           <span className="daily__bonus">
             <XpIcon size={18} />
-            {t(done ? 'daily.bonusCollected' : 'daily.bonusXp', { xp: GAME_CONFIG.rewards.dailyBonusXp })}
+            {t(done ? 'daily.bonusCollected' : 'daily.bonusXp', { xp: config.rewards.dailyBonusXp })}
           </span>
           <span className="daily__timer">
             <Icon name="clock" size={15} />
-            {t(done ? 'daily.nextIn' : 'daily.timeLeft', { time: countdown })}
+            {t(done ? 'daily.nextIn' : 'daily.timeLeft', { time: countdown })}{mode === 'server' && <> · {t('connection.utc')}</>}
           </span>
         </div>
       </div>

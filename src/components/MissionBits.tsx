@@ -1,4 +1,4 @@
-import { DIFFICULTY } from '../game/missions';
+import { useGame } from '../state/GameContext';
 import type { MissionDifficulty, MissionStatus } from '../game/types';
 import { difficultyLabel } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -21,8 +21,9 @@ export function StatusPill({ status }: { status: MissionStatus }) {
 
 export function DifficultyDots({ difficulty }: { difficulty: MissionDifficulty }) {
   const { language, t } = useLanguage();
-  const d = DIFFICULTY[difficulty];
-  const label = difficultyLabel(difficulty, language);
+  const { difficulty: difficulties } = useGame();
+  const d = difficulties[difficulty];
+  const label = difficultyLabel(difficulty, language, difficulties);
   return (
     <span className="difficulty" title={t('difficulty.label', { difficulty: label })}>
       <span className="difficulty__dots" aria-hidden="true">

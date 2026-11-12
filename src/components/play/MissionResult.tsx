@@ -1,10 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { getAchievement } from '../../game/achievements';
 import { getLevelDef, getLevelInfo } from '../../game/levels';
 import type { HistoryEntry, Mission } from '../../game/types';
 import { levelTitle, localizeAchievement, rewardLabel } from '../../i18n/content';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { navigate } from '../../router';
+import { useGame } from '../../state/GameContext';
 import { AchievementBadge } from '../AchievementBadge';
 import { Confetti } from '../ui/Confetti';
 import { CoinIcon, FlameIcon, XpIcon } from '../ui/Icon';
@@ -36,6 +36,7 @@ interface MissionResultProps {
 /** Mission completion screen. Everything shown here is derived from the saved history entry. */
 export function MissionResult({ entry, mission }: MissionResultProps) {
   const { language, t, n } = useLanguage();
+  const { mode, persistence, contractError, refresh, config, achievements: achievementCatalog } = useGame();
   const leveledUp = entry.levelAfter > entry.levelBefore;
   const [phase, setPhase] = useState<Phase>('start');
   const [burst, setBurst] = useState(0);
@@ -60,13 +61,13 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
     return () => window.clearTimeout(timer);
   }, [phase]);
 
-  const before = getLevelInfo(entry.xpBefore);
-  const after = getLevelInfo(entry.xpAfter);
+  const before = getLevelInfo(entry.xpBefore, config.levels);
+  const after = getLevelInfo(entry.xpAfter, config.levels);
   const showAfter = !leveledUp || phase === 'snap' || phase === 'final';
   const shown = showAfter ? after : before;
   const barValue = phase === 'start' ? before.progress : !leveledUp ? after.progress : phase === 'snap' ? 0 : phase === 'final' ? after.progress : 1;
-  const newLevel = getLevelDef(entry.levelAfter);
-  const achievements = entry.achievementsUnlocked.map(getAchievement).filter((a) => a !== undefined);
+  const newLevel = getLevelDef(entry.levelAfter, config.levels);
+  const achievements = entry.achievementsUnlocked.map((id) => achievementCatalog.find((item) => item.id === id)).filter((a) => a !== undefined);
 
   const collect = (to: string) => {
     if (collecting) return;
@@ -79,6 +80,13 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
     <div className="result">
       <Confetti burst={burst} />
       <div className="result__stage">
+        {mode === 'server' && (persistence === 'error' || contractError) && (
+          <div className="result__sync" role="alert">
+            <p>{t('connection.resultRefreshWarning')}</p>
+            {contractError && <p>{t(contractError === 'UNSUPPORTED_VERSION' ? 'connection.errorVersion' : 'connection.errorResponse')} {t('connection.compatibilityPaused')}</p>}
+            <button className="linkbtn" onClick={() => void refresh()}>{t('connection.retry')}</button>
+          </div>
+        )}
         <RewardHero />
 
         <h1 className="result__title">{t('result.completed')}</h1>
@@ -114,15 +122,15 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
           <div className="result__level-info">
             <div className="result__level-top">
               <span className="result__level-name">
-                {t('common.levelTitle', { level: shown.level, title: levelTitle(shown.level, language) })}
+                {t('common.levelTitle', { level: shown.level, title: levelTitle(shown.level, language, config.levels) })}
               </span>
               <span className="result__total">
-                <b>{n(totalXp)}</b> {t('result.xpTotalUnit')}
+                <b>{n(totalXp)}</b> {t(mode === 'server' ? 'result.xpAfterMission' : 'result.xpTotalUnit')}
               </span>
             </div>
             <ProgressBar value={barValue} tone="yellow" size="lg" instant={phase === 'snap'} label={t('common.levelProgress')} />
             <span className="result__level-hint">
-              {shown.isMax ? t('result.maxLevel') : t('common.xpToNext', { xp: Math.max(0, shown.nextMinXp! - totalXp), title: levelTitle(shown.level + 1, language) })}
+              {shown.isMax ? t('result.maxLevel') : t('common.xpToNext', { xp: Math.max(0, shown.nextMinXp! - totalXp), title: levelTitle(shown.level + 1, language, config.levels) })}
             </span>
           </div>
         </div>
@@ -173,7 +181,7 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
           <div className="levelup__card">
             <span className="levelup__eyebrow">{t('result.levelUp')}</span>
             <LevelBadge level={newLevel.level} color={newLevel.color} size={130} />
-            <h2>{levelTitle(newLevel.level, language)}</h2>
+            <h2>{levelTitle(newLevel.level, language, config.levels)}</h2>
             <p>{t('result.levelUpDescription', { level: newLevel.level })}</p>
             <button className="btn btn--yellow btn--block" onClick={() => setPhase('snap')} autoFocus>
               {t('result.awesome')}

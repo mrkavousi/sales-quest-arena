@@ -150,7 +150,7 @@ export interface HistoryEntry {
 }
 
 export interface DailyChallengeState {
-  /** Local date key (YYYY-MM-DD) the challenge belongs to. */
+  /** YYYY-MM-DD: local day in device mode, server UTC date_key in server mode. */
   date: string;
   missionId: string;
   completed: boolean;

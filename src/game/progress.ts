@@ -124,7 +124,7 @@ export interface PlayerStats {
 
 export function getPlayerStats(p: PlayerProgress, todayKey: string = toDateKey(new Date())): PlayerStats {
   return {
-    missionsCompleted: p.history.length,
+    missionsCompleted: Object.values(p.missions).reduce((total, mission) => total + (Number.isFinite(mission?.completions) ? Math.max(0, mission.completions) : 0), 0),
     totalXp: p.xp,
     coins: p.coins,
     streak: getCurrentStreak(p, todayKey),
