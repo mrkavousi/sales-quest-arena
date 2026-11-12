@@ -16,7 +16,8 @@ npm run build:standalone   # one self-contained file: standalone/index.html
 
 # With npm start running in another terminal:
 npx playwright install chromium
-npm run test:e2e    # English and Persian playthroughs, plus PWA checks
+npm run test:e2e    # English/Persian playthroughs, Tribal scaffold and PWA checks
+npm run test:tribal # default-off preview + temporary flag-on production build
 npm run test:pwa    # builds and tests installability, offline play and updates
 
 # Cross-repository integration test (fresh temporary demo database):
@@ -44,6 +45,24 @@ paths to a compatible backend. Do not expose the demo login publicly; see the
 [deployment and security notes](docs/bff-integration.md#deployment-and-security).
 Device-only progress and the language preference remain scoped to the site's origin;
 server progress belongs to the signed-in demo account and is separate.
+
+## Optional Tribal overview scaffold
+
+The read-only Tribal entry is **off by default**, including in production. To enable
+its presentation when building or running Vite, set `VITE_TRIBAL_ENABLED=true` (for
+example, `VITE_TRIBAL_ENABLED=true npm run dev` or `VITE_TRIBAL_ENABLED=true npm run build`).
+This public build flag is **not authorization**. The enabled page only shows a neutral
+not-connected state: it does not call a Tribal API, use the demo account, contain sample
+standings, submit reports or award points. View-model fixtures are restricted to tests.
+
+The shell keeps the game mounted and does not use or change game progress. The existing
+game provider still follows its normal local/server behavior in the background. A player
+must finish or save and exit a mission, and close an open game dialog, before opening
+the overview. The view model is a UI boundary, not an API contract or security policy;
+a future backend must authorize and filter all data before it reaches the browser. In
+tests, a player field is displayed only when its visibility flag is explicitly `true`.
+The nested presentation renders all supplied levels, while capping visual indentation
+to keep deep hierarchies readable on narrow screens.
 
 ## Install and play offline
 

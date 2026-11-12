@@ -1,0 +1,46 @@
+/* Scoped to the optional, read-only Tribal scaffold. */
+.tribal-entry {
+  display: flex;
+  justify-content: flex-end;
+  width: min(100%, 620px);
+  margin-inline: auto;
+  padding: calc(12px + var(--safe-top)) 16px 0;
+}
+
+/* Keep the game mounted, but not exposed while the independent shell is open.
+   The existing update notice remains visible and retains its normal behavior. */
+.tribal-game-layer--hidden > :not(.pwa-update) { display: none !important; }
+
+.tribal-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: calc(20px + var(--safe-top)) 16px calc(32px + var(--safe-bottom));
+}
+.tribal-page__inner { width: min(100%, 760px); margin-inline: auto; }
+.tribal-page__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.tribal-page__heading { margin: 28px 0 16px; }
+.tribal-page__heading h1 { font-size: clamp(25px, 6vw, 34px); line-height: 1.4; }
+.tribal-overview h2, .tribal-overview__state h2 { font-size: 20px; line-height: 1.5; }
+.tribal-overview__state p, .tribal-overview__empty { margin-top: 8px; color: var(--ink-2); }
+.tribal-tree, .tribal-players { list-style: none; min-width: 0; }
+.tribal-overview > .tribal-tree { margin-top: 12px; }
+.tribal-tree .tribal-tree { margin-block-start: 8px; padding-inline-start: 12px; border-inline-start: 2px solid var(--line); }
+.tribal-tree__unit { min-width: 0; padding-block: 6px; }
+.tribal-tree__label { color: var(--ink); font-weight: 900; overflow-wrap: anywhere; }
+.tribal-players { display: grid; gap: 8px; margin-block-start: 8px; }
+.tribal-player { min-width: 0; padding: 10px 12px; border-radius: 14px; background: var(--bg); }
+.tribal-player__fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.tribal-player__fields > div { min-width: 0; }
+.tribal-player dt { color: var(--ink-2); font-size: 12px; }
+.tribal-player dd { margin: 0; overflow-wrap: anywhere; }
+.tribal-player__avatar { display: block; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+.tribal-guard .toast { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
+.tribal-guard button { flex: none; padding: 6px; color: #fff; text-decoration: underline; }
+
+@media (max-width: 360px) {
+  .tribal-tree .tribal-tree { padding-inline-start: 7px; }
+}
+
+/* Further levels remain nested lists; cap accumulated indentation to keep
+   deep hierarchies usable on narrow screens. */
+.tribal-tree .tribal-tree--flush { padding-inline-start: 0; border-inline-start: 0; }

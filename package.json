@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "start": "npm run build && vite preview",
     "test": "vitest run",
-    "test:e2e": "node e2e/smoke.mjs && node e2e/persian.mjs && npm run test:pwa",
+    "test:e2e": "node e2e/smoke.mjs && node e2e/persian.mjs && npm run test:tribal && npm run test:pwa",
+    "test:tribal": "node e2e/tribal.mjs",
     "test:pwa": "npm run build && node e2e/pwa.mjs",
     "test:bff": "node e2e/bff.mjs"
   },

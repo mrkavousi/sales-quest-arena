@@ -103,6 +103,17 @@ try {
 
   await page.goto(base);
   await page.getByText('Choose a demo visitor').waitFor();
+  if (process.env.VITE_TRIBAL_ENABLED === 'true') {
+    // The neutral scaffold is accessible while the unrelated game login is gated.
+    await page.getByRole('link', { name: 'Tribal overview' }).click();
+    await page.getByRole('heading', { name: 'Tribal overview' }).waitFor();
+    assert.equal(await page.getByText('Not connected', { exact: true }).isVisible(), true);
+    assert.equal(await page.locator('.connection-gate').isVisible(), false);
+    assert.equal(await page.locator('.tribal-player, .tribal-tree').count(), 0);
+    await page.getByRole('link', { name: 'Back to game' }).click();
+    await page.getByText('Choose a demo visitor').waitFor();
+    console.log('  ✓ Neutral Tribal shell is independent of the game login gate');
+  }
   const anonymous = await page.evaluate(async () => {
     const response = await fetch('/api/v1/game/bootstrap');
     return { status: response.status, data: await response.json() };
@@ -225,6 +236,21 @@ try {
   await page.getByRole('button', { name: 'Save & exit' }).click();
   await page.getByText('Not confirmed by the server. Changes may be lost.').waitFor();
   assert.equal(await page.locator('.play').count(), 1, 'failed save stays in the mission');
+  if (process.env.VITE_TRIBAL_ENABLED === 'true') {
+    // The changed answer is only in the open screen/provider after the write
+    // failed. A Tribal hash must not unmount either of them or close the sheet.
+    await page.evaluate(() => { window.location.hash = '/tribal'; });
+    await page.locator('.tribal-guard').getByText('Finish or save and exit your mission before opening the Tribal overview.').waitFor();
+    await page.waitForURL('**/#/play/customer-visit-challenge');
+    assert.equal(await page.locator('.play').isVisible(), true);
+    assert.equal(await page.locator('.sheet').isVisible(), true);
+    assert.equal(await page.getByRole('radio', { name: /Existing Customer/, includeHidden: true }).getAttribute('aria-checked'), 'true');
+    assert.equal((await bootstrap()).progress.drafts['customer-visit-challenge'].answers.customer_type, 'new', 'the changed answer has not been saved by the server');
+    assert.equal(await localSave(), legacy);
+    assert.equal(await page.locator('.tribal-page').count(), 0);
+    await page.locator('.tribal-guard').getByRole('button', { name: 'Close' }).click();
+    console.log('  ✓ Tribal navigation cannot discard an unsaved server-game draft');
+  }
 
   // A cookie can change in another tab while this tab has unsaved answers.
   // Keep those answers in place instead of silently replacing the session.
