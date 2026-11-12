@@ -9,6 +9,7 @@ import './styles/arena.css';
 import './styles/pages.css';
 import './styles/play.css';
 import './styles/i18n.css';
+import './styles/pwa.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

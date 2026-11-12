@@ -1,4 +1,5 @@
 import { AppLayout, ToastHost } from './components/AppLayout';
+import { PwaUpdateNotice } from './components/PwaUpdateNotice';
 import { ArenaPage } from './pages/ArenaPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { MissionsPage } from './pages/MissionsPage';
@@ -6,6 +7,7 @@ import { PlayPage, ResultPage } from './pages/PlayPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { WelcomePage } from './pages/WelcomePage';
 import { LanguageProvider } from './i18n/LanguageContext';
+import { PwaProvider } from './pwa/PwaContext';
 import { useRoute } from './router';
 import { GameProvider, useGame } from './state/GameContext';
 
@@ -31,8 +33,11 @@ export default function App() {
   return (
     <LanguageProvider>
       <GameProvider>
-        <Screens />
-        <ToastHost />
+        <PwaProvider>
+          <Screens />
+          <PwaUpdateNotice />
+          <ToastHost />
+        </PwaProvider>
       </GameProvider>
     </LanguageProvider>
   );

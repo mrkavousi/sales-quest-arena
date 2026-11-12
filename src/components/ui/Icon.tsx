@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 export type IconName =
   | 'shield' | 'target' | 'scroll' | 'user' | 'close' | 'back' | 'arrow' | 'lock' | 'check' | 'clock'
-  | 'globe' | 'pencil' | 'store' | 'userPlus' | 'trophy' | 'box' | 'chat' | 'search' | 'play' | 'refresh' | 'trash' | 'steps';
+  | 'globe' | 'pencil' | 'store' | 'userPlus' | 'trophy' | 'box' | 'chat' | 'search' | 'play' | 'refresh' | 'trash' | 'steps' | 'install';
 
 const PATHS: Record<IconName, ReactNode> = {
   shield: <><path d="M12 3l8 3v6c0 4.6-3.3 7.9-8 9-4.7-1.1-8-4.4-8-9V6l8-3z" /><path d="M12 8.2l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6L8.2 11l2.6-.4L12 8.2z" fill="currentColor" stroke="none" /></>,
@@ -27,6 +27,7 @@ const PATHS: Record<IconName, ReactNode> = {
   refresh: <><path d="M20 12a8 8 0 1 1-2.6-5.9" /><path d="M20 4v5h-5" /></>,
   trash: <><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13" /></>,
   steps: <><path d="M4 18h5v-5h5V8h6" /></>,
+  install: <><rect x="5.5" y="2.5" width="13" height="19" rx="3" /><path d="M12 6.5v7M9 10.5l3 3 3-3M10.5 17.5h3" /></>,
 };
 
 interface IconProps {

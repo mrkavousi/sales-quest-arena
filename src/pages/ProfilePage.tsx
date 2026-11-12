@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { AchievementBadge } from '../components/AchievementBadge';
 import { Avatar } from '../components/art/Avatar';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { InstallEntry } from '../components/InstallEntry';
 import { resetHeaderMemory } from '../components/PlayerHeader';
 import { CoinIcon, FlameIcon, Icon, XpIcon } from '../components/ui/Icon';
 import { ProgressBar, ProgressRing } from '../components/ui/Progress';
@@ -77,6 +78,8 @@ export function ProfilePage() {
         <header className="panel__head"><h2>{t('language.label')}</h2></header>
         <LanguageSwitcher />
       </section>
+
+      <InstallEntry />
 
       <section className="panel">
         <header className="panel__head"><h2>{t('profile.levelPath')}</h2></header>

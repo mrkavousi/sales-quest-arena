@@ -14,7 +14,8 @@ npm run build:standalone   # one self-contained file: standalone/index.html
 
 # With npm start running in another terminal:
 npx playwright install chromium
-npm run test:e2e    # English smoke test and Persian end-to-end playthrough
+npm run test:e2e    # English and Persian playthroughs, plus PWA checks
+npm run test:pwa    # builds and tests installability, offline play and updates
 ```
 
 Stack: React 18 + TypeScript + Vite. No UI kit, no animation library, no 3D engine —
@@ -32,6 +33,27 @@ preview deployments.
 Game progress and the language preference are stored in the browser, scoped to the
 site's origin. They do not automatically transfer between localhost, a Vercel preview
 URL, and the production URL, or between different devices.
+
+## Install and play offline
+
+The HTTPS deployment is an installable progressive web app (PWA); no app store or APK
+is required. On Android, open the production URL in Chrome and tap **Install the game**,
+or use Chrome's three-dot menu → **Install app / Add to Home screen**. On iPhone/iPad,
+open it in Safari, tap **Share** → **Add to Home Screen** → **Add**. Browser and OS
+versions can use slightly different menu labels. Installation is available on HTTPS
+or localhost, not when opening the standalone HTML file directly.
+
+After the first online visit completes and the service worker has cached the app,
+the game, translations, fonts and icons work offline. Progress stays on the device;
+clearing site/app storage or uninstalling may delete it, and some platforms keep an
+installed app's storage separate from a browser tab. There is no cloud sync or backup.
+
+A new release is downloaded in the background and waits until the player chooses to
+update or closes the old app. The update notice is postponed during a mission. The
+regular Vite build generates `dist/sw.js` with a content-based revision and precaches
+the built assets; the single-file build remains self-contained and does not register a
+service worker. `npm run test:pwa` checks installability and offline behavior using
+Chromium and simulates Android/iOS install flows and a safe update.
 
 ## What is in version 1
 
@@ -75,6 +97,7 @@ src/
   i18n/                 English/Persian UI strings, translated game content and locale helpers
     LanguageContext.tsx Language preference, document language and direction
     locale.test.ts      Translation coverage, formatting and save-compatibility tests
+  pwa/PwaContext.tsx    Install prompt, service-worker registration and update handling
   state/GameContext.tsx Single store; one `commit()` path that updates memory and saves
   router.ts             Tiny hash router
   components/           PlayerHeader, MissionMap, MissionCard, MissionDetail, DailyChallenge,

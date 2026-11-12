@@ -3,6 +3,7 @@ import { Avatar } from '../components/art/Avatar';
 import { Mascot } from '../components/art/Mascot';
 import { Logo, StorageBanner } from '../components/AppLayout';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { InstallEntry } from '../components/InstallEntry';
 import { buzz } from '../components/ui/motion';
 import { AVATAR_IDS } from '../game/progress';
 import type { AvatarId } from '../game/types';
@@ -78,6 +79,7 @@ export function WelcomePage() {
           {t('welcome.enter')}
         </button>
         <p className="welcome__fine">{t(persistence === 'saved' ? 'welcome.saved' : 'profile.notSaved')}</p>
+        <InstallEntry />
       </div>
     </div>
   );
