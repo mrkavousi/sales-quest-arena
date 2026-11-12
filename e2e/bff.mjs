@@ -5,8 +5,8 @@
  * SQA_BACKEND_PYTHON=/path/to/venv/bin/python \
  * SQA_CHROMIUM_PATH=/path/to/chromium npm run test:bff
  *
- * Requires backend main at b6ffb1d or a compatible version, with dependencies
- * installed. No external service, production database, or real identity is used.
+ * Requires backend main at 0bd8707 or later (the JSON `/api/v1/game/demo-users`,
+ * `/demo-login` and `/logout` routes), with dependencies installed. No external service, production database, or real identity is used.
  */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -97,7 +97,7 @@ try {
     await tab.getByRole('button', { name: 'Sign in to demo' }).click();
     if (expectPending) await tab.getByText('Check the last completion').waitFor();
     else await tab.waitForFunction(() => !document.querySelector('.connection-gate'));
-    assert.equal(new URL(tab.url()).search, '', 'the backend redirect token never becomes the browser URL');
+    assert.equal(new URL(tab.url()).search, '', 'JSON demo sign-in never puts a session token in the URL');
     return ids[index];
   };
 
@@ -451,6 +451,36 @@ try {
   const tabIdentity = await otherTab.evaluate(async () => (await (await fetch('/api/v1/game/bootstrap')).json()).player.id);
   assert.equal(tabIdentity, secondId);
   await otherTab.close();
+
+  // A second visitor may not have onboarded on the shared demo database, so
+  // pass the welcome screen when it appears; the profile keeps the Sign out
+  // action either way.
+  await page.goto(`${base}#/profile`);
+  await page.waitForSelector('.welcome__card, .profile__hero');
+  if (!(await page.locator('.profile__hero').count())) {
+    await page.locator('.welcome__card .input').fill('Server Bea');
+    await page.getByRole('button', { name: 'Enter the arena' }).click();
+    await page.waitForSelector('.profile__hero', { timeout: 20_000 });
+  }
+
+  // Signing out must clear the HttpOnly cookie, not just reopen the picker: the
+  // visitor list still loads, bootstrap is anonymous again and a reload stays
+  // on the picker instead of restoring the previous account.
+  const logoutPost = page.waitForResponse((response) => response.request().method() === 'POST' && response.url().endsWith('/api/v1/game/logout'));
+  await page.getByRole('button', { name: 'Sign out' }).first().click();
+  assert.equal((await logoutPost).status(), 200, 'the server really cleared the cookie');
+  await page.getByText('Choose a demo visitor').waitFor();
+  await page.getByText(/Signed out of the demo account/).waitFor();
+  assert.equal(await page.locator('.hud').count(), 0, 'the picker is shown after signing out');
+  assert.equal(await page.evaluate(async () => (await fetch('/api/v1/game/bootstrap')).status), 401, 'the demo cookie was really cleared');
+  await page.reload();
+  await page.getByText('Choose a demo visitor').waitFor();
+  assert.equal(await page.locator('.connection-gate select option').count(), 3);
+  assert.equal(await page.locator('.hcard').count(), 0);
+  const thirdId = await selectVisitor(2);
+  assert.equal((await bootstrap()).player.id, thirdId);
+  assert.equal((await bootstrap()).progress.player.onboarded, false, 'the third visitor starts fresh');
+  console.log('  ✓ Sign-out clears the demo cookie and stays on the account picker');
 
   // Unreachable BFF presents an explicit error, never a silent local fallback.
   const offlineBootstrap = (route) => route.abort('failed');

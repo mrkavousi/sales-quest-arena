@@ -1,7 +1,8 @@
 # Sales Quest game BFF: prototype integration
 
 This frontend integrates with `iciiex/comu-center` at backend commit
-`b6ffb1d6fc2996f466fc4b14617d50ef3d26e0ff` (PR #10). It accepts API version
+`0bd8707933c4d5acd79edd92a91822e320978e69` (PR #11), which adds the JSON demo
+login routes. It accepts API version
 `1` and content version `sales-quest-arena-7de8a5a0a0da`. The server's six-mission
 catalog, categories, difficulty, reward configuration, levels, achievements, mission
 views and `date_key` are used in server mode. Translations are display-only and
@@ -38,8 +39,8 @@ npm ci
 GAME_BFF_TARGET=http://127.0.0.1:8000 VITE_GAME_MODE=server npm run dev
 ```
 
-Open the frontend on port 5173. Vite proxies `/api/v1/game/*`, `/login`, and
-`/demo-login` on the frontend origin to the backend. The backend address is used by
+Open the frontend on port 5173. Vite proxies `/api/v1/game/*` on the frontend origin
+to the backend, which covers every route the app uses. The backend address is used by
 Vite only: browser code always uses same-origin paths and does not call localhost or
 another origin directly. `GAME_BFF_TARGET` also configures `vite preview`, not a
 production deployment. Bind/secure the demo appropriately for your environment;
@@ -55,23 +56,29 @@ always device-only, as a file has no same-origin HTTP backend.
 
 ## Login and session limitations
 
-The backend currently has no JSON demo-user list. As a temporary prototype adapter,
-the client fetches `/login`, reads its current HTML form, and offers only options
-labelled `ویزیتور`; the BFF independently enforces the visitor role. A backend
-change to that form requires updating this adapter or, preferably, adding a
-supported JSON login/user-selection contract.
+Sign-in uses only JSON routes that exist in the backend's **dev and test**
+environments: `GET /api/v1/game/demo-users` fills the visitor picker (IDs and names
+only — no mobile numbers), `POST /api/v1/game/demo-login` takes `{user_id}` and sets
+an HttpOnly, SameSite=Lax cookie, and `POST /api/v1/game/logout` clears it. The BFF
+independently enforces the visitor role on every game request, so picker IDs are
+convenience data, never authorization.
 
-The client sends `/demo-login` as a same-origin form request with `redirect: manual`.
-The backend's response establishes an HttpOnly, SameSite=Lax cookie, and bootstrap
-confirms that login worked. The backend prototype also puts the signed session token
-in the redirect's `Location` for its older HTML app; the frontend **does not follow,
-read or store that URL**, and never places session tokens in browser URLs or storage.
-The response header nevertheless exists at the proxy/backend, so do not log it or
-expose the old URL-token fallback to untrusted environments. Switching to the
-local game is not a logout: the demo cookie remains until it expires or is replaced.
-If third-party cookies are blocked in an embedded preview, open the frontend in a
+The client never follows a redirect for these calls, never reads or stores the
+session token, and keeps no CSRF token outside the in-memory bootstrap snapshot. Each
+sign-in is confirmed with a bootstrap request before any player data is rendered; a
+401 there is reported as a blocked cookie rather than as a successful login. If
+third-party cookies are blocked in an embedded preview, open the frontend in a
 top-level browser tab; the game API intentionally does not accept URL tokens as a
 workaround.
+
+Because both login routes answer `404` outside dev/test, the picker reports that as
+`DEMO_LOGIN_DISABLED` ("demo sign-in is disabled on this server") instead of a wrong
+visitor, and a `429` from the per-IP rate limit is shown as "too many attempts".
+Switching to the device-only game is not a logout: the demo cookie remains until it
+expires, is replaced, or the player uses **Sign out** on the profile screen. Signing
+out asks the server to clear the cookie, then returns to the picker with a
+confirmation; if the cookie could not be cleared the picker says so and a reload
+re-checks the session.
 
 **Demo account selection is not authentication.** Before any public production
 release, replace it with approved real authentication or disable demo login outside
@@ -119,6 +126,11 @@ cannot secure that backend endpoint.
   UTC `date_key`. The displayed countdown uses the returned server time and does not
   roll to a new day without a fresh server response. Device-only mode retains its
   original local-calendar behavior.
+- Sign-out is explicit and server-confirmed: the profile screen calls the CSRF-checked
+  `/logout` route and then reopens the visitor picker. **Change demo account** only
+  reopens the picker and leaves the cookie alone; switching to the device-only game
+  never logs out. A pending completion retry record is per account and survives
+  sign-out, so signing back in as the same visitor can still recover it.
 - History uses the paginated `/history` endpoint. Totals computed from history pages
   are labelled partial while more pages remain (or the history request failed);
   mission counts come from the server's mission records.
@@ -127,9 +139,10 @@ cannot secure that backend endpoint.
 
 A static Vercel deployment using the checked-in `vercel.json` serves the device-only
 app but does **not** connect it to a backend. Configure a same-origin HTTPS reverse
-proxy before enabling server mode. Route `/api/v1/game/*`, `/login`, and `/demo-login`
-to the compatible backend, preserve its Set-Cookie, and route the frontend assets to
-the static app. Never cache personalized API/login responses at a CDN or proxy;
+proxy before enabling server mode. Route `/api/v1/game/*` to the compatible backend,
+preserve its Set-Cookie, and route the frontend assets to the static app. The
+prototype's JSON demo routes are dev/test-only, so a production deployment configured
+this way will offer the picker and then explain that demo sign-in is disabled. Never cache personalized API/login responses at a CDN or proxy;
 the app's service worker also explicitly bypasses them. Do not hard-code a remote
 backend or session in browser code. The current prototype's cookie is HttpOnly and
 SameSite=Lax but is **not marked Secure** by the backend; add Secure at the backend or

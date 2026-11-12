@@ -10,10 +10,10 @@ export default defineConfig(({ mode }) => {
   // Development/preview-only reverse proxy. Browser requests stay same-origin;
   // the backend address is never embedded in the client bundle.
   const target = process.env.GAME_BFF_TARGET;
+  // Everything the client needs is under /api/v1/game; the older /login and
+  // /demo-login HTML routes are no longer used by the app.
   const proxy = target ? {
     '/api/v1/game': { target, changeOrigin: true },
-    '/login': { target, changeOrigin: true },
-    '/demo-login': { target, changeOrigin: true },
   } : undefined;
   return {
     base: './',

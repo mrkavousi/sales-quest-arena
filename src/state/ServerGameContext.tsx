@@ -18,7 +18,7 @@ interface ProviderProps { children: ReactNode; switchMode: (mode: GameMode) => v
 
 type Gate =
   | { state: 'loading' }
-  | { state: 'login' }
+  | { state: 'login'; notice?: 'signedOut' | 'signOutFailed' }
   | { state: 'error'; error: unknown }
   | { state: 'ready'; data: api.GameBootstrap };
 
@@ -36,7 +36,7 @@ function GateFrame({ children, switchMode, busy = false }: { children: ReactNode
   );
 }
 
-function DemoLogin({ onLogin }: { onLogin: (data: api.GameBootstrap) => void }) {
+function DemoLogin({ onLogin, notice }: { onLogin: (data: api.GameBootstrap) => void; notice?: 'signedOut' | 'signOutFailed' }) {
   const { t } = useLanguage();
   const [users, setUsers] = useState<api.DemoUser[] | null>(null);
   const [selected, setSelected] = useState('');
@@ -69,6 +69,7 @@ function DemoLogin({ onLogin }: { onLogin: (data: api.GameBootstrap) => void }) 
       <Mascot size={90} mood="happy" />
       <h1>{t('connection.loginTitle')}</h1>
       <p>{t('connection.loginDescription')}</p>
+      {notice && <p className={notice === 'signOutFailed' ? 'connection-gate__error' : 'connection-gate__notice'} role={notice === 'signOutFailed' ? 'alert' : 'status'}>{t(notice === 'signOutFailed' ? 'connection.signOutFailed' : 'connection.signOutDone')}</p>}
       <p className="connection-gate__warning">{t('connection.demoWarning')}</p>
       {loading && <p role="status">{t('connection.loading')}</p>}
       {users && !loading && (
@@ -108,12 +109,12 @@ export function ServerGameProvider({ children, switchMode }: ProviderProps) {
   }, [attempt]);
 
   if (gate.state === 'ready') {
-    return <ServerGameSession key={gate.data.player.id} initial={gate.data} switchMode={switchMode} onChangeAccount={() => setGate({ state: 'login' })} onSessionChanged={(data) => setGate({ state: 'ready', data })}>{children}</ServerGameSession>;
+    return <ServerGameSession key={gate.data.player.id} initial={gate.data} switchMode={switchMode} onChangeAccount={() => setGate({ state: 'login' })} onSessionChanged={(data) => setGate({ state: 'ready', data })} onSignedOut={(notice) => setGate({ state: 'login', notice })}>{children}</ServerGameSession>;
   }
   return (
     <GateFrame switchMode={switchMode}>
       {gate.state === 'loading' && <div className="connection-gate__body" role="status"><Mascot size={90} mood="think" /><h1>{t('connection.loading')}</h1></div>}
-      {gate.state === 'login' && <DemoLogin onLogin={(data) => setGate({ state: 'ready', data })} />}
+      {gate.state === 'login' && <DemoLogin notice={gate.notice} onLogin={(data) => setGate({ state: 'ready', data })} />}
       {gate.state === 'error' && <div className="connection-gate__body"><Mascot size={90} mood="sad" /><h1>{t('connection.errorTitle')}</h1><p role="alert">{t(apiErrorKey(gate.error))}</p><button className="btn btn--yellow btn--block" onClick={() => setAttempt((value) => value + 1)}>{t('connection.retry')}</button></div>}
     </GateFrame>
   );
@@ -121,10 +122,11 @@ export function ServerGameProvider({ children, switchMode }: ProviderProps) {
 
 type DraftChange = { missionId: string; stepIndex: number; answers: Answers };
 
-function ServerGameSession({ children, switchMode, initial, onChangeAccount, onSessionChanged }: ProviderProps & {
+function ServerGameSession({ children, switchMode, initial, onChangeAccount, onSessionChanged, onSignedOut }: ProviderProps & {
   initial: api.GameBootstrap;
   onChangeAccount: () => void;
   onSessionChanged: (data: api.GameBootstrap) => void;
+  onSignedOut: (notice: 'signedOut' | 'signOutFailed') => void;
 }) {
   const { language, t } = useLanguage();
   const [snapshot, setSnapshot] = useState(initial);
@@ -462,15 +464,27 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
   const mayLeave = useCallback(() => (!draft.current && !flushing.current && !completing.current) || window.confirm(t('connection.leaveUnsaved')), [t]);
   const safeSwitchMode = useCallback((mode: GameMode) => { if (mayLeave()) switchMode(mode); }, [mayLeave, switchMode]);
   const safeChangeAccount = useCallback(() => { if (mayLeave()) onChangeAccount(); }, [mayLeave, onChangeAccount]);
+  const signOut = useCallback(async (): Promise<boolean> => {
+    if (!mayLeave()) return false;
+    // `Change demo account` only reopens the picker. Signing out also asks the
+    // server to clear the HttpOnly cookie. A 401/403 means the session was
+    // already gone, which is the same end state; anything else is reported.
+    let cleared = false;
+    try { cleared = await api.demoLogout(snapshotRef.current.csrf_token); } catch (error) {
+      cleared = error instanceof api.GameApiError && (error.status === 401 || error.status === 403);
+    }
+    onSignedOut(cleared ? 'signedOut' : 'signOutFailed');
+    return cleared;
+  }, [mayLeave, onSignedOut]);
   const missions = useMemo(() => snapshot.missions.map((mission) => localizeMissionView(mission, snapshot.progress, language, snapshot.missions)), [snapshot.missions, snapshot.progress, language]);
   const value = useMemo<GameContextValue>(() => ({
-    mode: 'server', switchMode: safeSwitchMode, account: snapshot.player, changeAccount: safeChangeAccount,
+    mode: 'server', switchMode: safeSwitchMode, account: snapshot.player, changeAccount: safeChangeAccount, signOut,
     progress: snapshot.progress, todayKey: snapshot.date_key, serverClockOffset: clockOffset, missions,
     config: snapshot.game_config, categories: snapshot.categories, difficulty: snapshot.difficulty, achievements: snapshot.achievements_catalog,
     level: getLevelInfo(snapshot.progress.xp, snapshot.game_config.levels), stats: getPlayerStats(snapshot.progress, snapshot.date_key),
     persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission,
     resetProgress: () => {}, lastResult, refresh, loadHistory,
-  }), [safeSwitchMode, snapshot, safeChangeAccount, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, lastResult, refresh, loadHistory]);
+  }), [safeSwitchMode, snapshot, safeChangeAccount, signOut, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, lastResult, refresh, loadHistory]);
 
   if (pending.status === 'loaded' || pending.status === 'corrupt') {
     const recover = async () => {
