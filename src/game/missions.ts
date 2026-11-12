@@ -358,6 +358,15 @@ export function getMission(id: string): Mission | undefined {
   return BY_ID.get(id);
 }
 
+/**
+ * Playable missions = the six built-in ones plus any purchased demo-store
+ * specials. Complete lists (map, list page, server contract checks) keep using
+ * `MISSIONS`/`SPECIAL_MISSIONS` directly so the two groups never merge.
+ */
+export function getPlayableMission(id: string, extra: readonly Mission[] = []): Mission | undefined {
+  return BY_ID.get(id) ?? extra.find((mission) => mission.id === id);
+}
+
 export function isStepAnswered(step: MissionStep, answers: Answers): boolean {
   const value = answers[step.id];
   switch (step.type) {

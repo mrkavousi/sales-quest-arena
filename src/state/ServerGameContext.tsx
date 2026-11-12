@@ -12,7 +12,7 @@ import type { Answers, AvatarId, HistoryEntry } from '../game/types';
 import { localizeMissionView } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
-import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState } from './GameShared';
+import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState, type PurchaseOutcome } from './GameShared';
 
 interface ProviderProps { children: ReactNode; switchMode: (mode: GameMode) => void }
 
@@ -467,24 +467,30 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
   const signOut = useCallback(async (): Promise<boolean> => {
     if (!mayLeave()) return false;
     // `Change demo account` only reopens the picker. Signing out also asks the
-    // server to clear the HttpOnly cookie. A 401/403 means the session was
-    // already gone, which is the same end state; anything else is reported.
+    // server to clear the HttpOnly cookie. Only a 401 means the session was
+    // already gone (the same safe end state). A 403 is a CSRF/authorization
+    // failure: the cookie may well still be live, so it must be reported as a
+    // failure instead of claiming a successful sign-out.
     let cleared = false;
     try { cleared = await api.demoLogout(snapshotRef.current.csrf_token); } catch (error) {
-      cleared = error instanceof api.GameApiError && (error.status === 401 || error.status === 403);
+      cleared = api.isSignOutAlreadyEnded(error);
     }
     onSignedOut(cleared ? 'signedOut' : 'signOutFailed');
     return cleared;
   }, [mayLeave, onSignedOut]);
   const missions = useMemo(() => snapshot.missions.map((mission) => localizeMissionView(mission, snapshot.progress, language, snapshot.missions)), [snapshot.missions, snapshot.progress, language]);
+  // The BFF has no integrated store contract yet: local purchases are device-only
+  // and must never be presented as server-confirmed or reused in this mode.
+  const store = useMemo(() => ({ status: 'server-unavailable' as const, offers: [] as const, purchased: [] as string[] }), []);
+  const buyOffer = useCallback(async (): Promise<PurchaseOutcome> => ({ ok: false, error: 'unavailable' }), []);
   const value = useMemo<GameContextValue>(() => ({
     mode: 'server', switchMode: safeSwitchMode, account: snapshot.player, changeAccount: safeChangeAccount, signOut,
     progress: snapshot.progress, todayKey: snapshot.date_key, serverClockOffset: clockOffset, missions,
     config: snapshot.game_config, categories: snapshot.categories, difficulty: snapshot.difficulty, achievements: snapshot.achievements_catalog,
     level: getLevelInfo(snapshot.progress.xp, snapshot.game_config.levels), stats: getPlayerStats(snapshot.progress, snapshot.date_key),
     persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission,
-    resetProgress: () => {}, lastResult, refresh, loadHistory,
-  }), [safeSwitchMode, snapshot, safeChangeAccount, signOut, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, lastResult, refresh, loadHistory]);
+    resetProgress: () => {}, store, buyOffer, lastResult, refresh, loadHistory,
+  }), [safeSwitchMode, snapshot, safeChangeAccount, signOut, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, store, buyOffer, lastResult, refresh, loadHistory]);
 
   if (pending.status === 'loaded' || pending.status === 'corrupt') {
     const recover = async () => {

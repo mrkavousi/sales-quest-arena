@@ -2,9 +2,10 @@ import { findNewAchievements } from './achievements';
 import { GAME_CONFIG } from './config';
 import { daysBetween, toDateKey } from './dates';
 import { getLevelInfo } from './levels';
-import { collectFlags, getMission, getRating, isMissionComplete, sanitizeAnswers } from './missions';
+import { collectFlags, getPlayableMission, getRating, isMissionComplete, sanitizeAnswers } from './missions';
 import { ensureDaily, getLockReason } from './progress';
 import { calculateRewards } from './rewards';
+import { getUnlockedSpecialMissions } from './store';
 import type { Answers, HistoryEntry, PlayerProgress } from './types';
 
 export class MissionError extends Error {
@@ -32,7 +33,8 @@ export function completeMission(
   rawAnswers: Answers,
   now: Date = new Date(),
 ): CompletionResult {
-  const mission = getMission(missionId);
+  // Only purchased demo-store specials are playable on top of the six missions.
+  const mission = getPlayableMission(missionId, getUnlockedSpecialMissions(current));
   if (!mission) throw new MissionError(`Unknown mission: ${missionId}`);
 
   const lockReason = getLockReason(mission, current);

@@ -4,6 +4,7 @@ import { MissionDetail } from '../components/MissionDetail';
 import { MissionMap } from '../components/MissionMap';
 import { PlayerHeader } from '../components/PlayerHeader';
 import { PlayerProgress } from '../components/PlayerProgress';
+import { StoreEntry } from '../components/StoreEntry';
 import { getActiveMissionId } from '../game/progress';
 import { useGame } from '../state/GameContext';
 
@@ -21,6 +22,9 @@ export function ArenaPage() {
         </div>
         <div className="arena__map">
           <MissionMap missions={missions} activeId={getActiveMissionId(missions)} onSelect={setSelected} />
+        </div>
+        <div className="arena__store">
+          <StoreEntry />
         </div>
         <div className="arena__progress">
           <PlayerProgress />

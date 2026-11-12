@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { isStepAnswered, isStepRequired } from '../../game/missions';
+import { isSpecialMissionId } from '../../game/store';
 import type { Answers, AnswerValue, Mission, MissionDraft } from '../../game/types';
 import { keyboardDigit } from '../../i18n/locale';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -71,8 +72,11 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
     if (actionLock.current) return;
     actionLock.current = true;
     setFinishing(true);
+    const special = isSpecialMissionId(mission.id);
     void finishMission(mission.id, answers).then((entry) => {
-      if (entry) navigate(`/result/${entry.id}`, { replace: true });
+      // Purchased demo-store missions use their own result route because they are
+      // outside the six-mission catalog that `/result` resolves against.
+      if (entry) navigate(`${special ? '/result-special' : '/result'}/${entry.id}`, { replace: true });
     }).finally(() => { actionLock.current = false; setFinishing(false); });
   }, [answers, canContinue, finishMission, index, isLast, mission.id, saveDraft]);
 

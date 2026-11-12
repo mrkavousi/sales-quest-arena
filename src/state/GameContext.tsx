@@ -7,11 +7,12 @@ import { getLevelInfo } from '../game/levels';
 import { CATEGORIES, DIFFICULTY, getMission } from '../game/missions';
 import { createInitialProgress, ensureDaily, getLockReason, getMissionViews, getPlayerStats } from '../game/progress';
 import { clearProgress, isStorageAvailable, loadProgress, saveProgress, STORAGE_KEY } from '../game/storage';
+import { getPurchased, getUnlockedSpecialMissions, purchaseOffer, STORE_OFFERS, StoreError } from '../game/store';
 import type { Answers, AvatarId, HistoryEntry, PlayerProgress } from '../game/types';
 import { localizeMissionView } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
-import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState } from './GameShared';
+import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState, type PurchaseOutcome } from './GameShared';
 import { ServerGameProvider } from './ServerGameContext';
 
 export { useGame } from './GameShared';
@@ -94,7 +95,7 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
   }, [commit]);
 
   const startMission = useCallback(async (missionId: string): Promise<boolean> => {
-    const mission = getMission(missionId);
+    const mission = getMission(missionId) ?? getUnlockedSpecialMissions(ref.current).find((item) => item.id === missionId);
     if (!mission || getLockReason(mission, ref.current)) return false;
     commit((p) => p.drafts[missionId] ? p : { ...p, drafts: { ...p.drafts, [missionId]: { missionId, stepIndex: 0, answers: {}, startedAt: new Date().toISOString() } } });
     return true;
@@ -130,6 +131,29 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
     }
   }, [commit, toast, t]);
 
+  /**
+   * Device-only demo purchase, written before it is adopted: the verified save
+   * must contain the debited balance and the offer id, otherwise nothing changes
+   * in memory either. A rejected purchase therefore never spends a coin.
+   */
+  const buyOffer = useCallback(async (offerId: string): Promise<PurchaseOutcome> => {
+    let result;
+    try {
+      result = purchaseOffer(ref.current, offerId);
+    } catch (error) {
+      return { ok: false, error: error instanceof StoreError ? error.code : 'save_failed' };
+    }
+    // `saveProgress` reads the value back, so a partial or blocked write fails here.
+    if (!saveProgress(result.progress) || !getPurchased(result.progress).includes(offerId)) {
+      setPersistence(isStorageAvailable() ? 'error' : 'unavailable');
+      return { ok: false, error: 'save_failed' };
+    }
+    ref.current = result.progress;
+    setProgress(result.progress);
+    setPersistence('saved');
+    return { ok: true, result };
+  }, []);
+
   const resetProgress = useCallback(() => {
     clearProgress();
     const fresh = ensureDaily(createInitialProgress(), toDateKey(new Date()));
@@ -139,6 +163,7 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
   }, []);
 
   const missions = useMemo(() => getMissionViews(progress, todayKey).map((mission) => localizeMissionView(mission, progress, language)), [progress, todayKey, language]);
+  const store = useMemo(() => ({ status: 'available' as const, offers: STORE_OFFERS, purchased: getPurchased(progress) }), [progress]);
   const refresh = useCallback(async () => true, []);
   const loadHistory = useCallback(async () => ({ items: ref.current.history, next_cursor: null }), []);
   const value = useMemo<GameContextValue>(() => ({
@@ -146,8 +171,9 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
     missions, config: GAME_CONFIG, categories: CATEGORIES, difficulty: DIFFICULTY, achievements: ACHIEVEMENTS,
     level: getLevelInfo(progress.xp), stats: getPlayerStats(progress, todayKey), persistence, sessionChanged: false, contractError: null, toasts, toast,
     completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, resetProgress,
+    store, buyOffer,
     lastResult: null, refresh, loadHistory,
-  }), [switchMode, progress, todayKey, missions, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, resetProgress, refresh, loadHistory]);
+  }), [switchMode, progress, todayKey, missions, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, resetProgress, store, buyOffer, refresh, loadHistory]);
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }

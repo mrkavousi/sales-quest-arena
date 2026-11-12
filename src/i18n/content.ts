@@ -249,6 +249,81 @@ export const PERSIAN_CATEGORIES: Record<MissionCategory, string> = {
   sales_achievement: 'موفقیت در فروش',
 };
 
+/**
+ * Persian copy for demo-store missions. Kept in its own map so the main
+ * six-mission coverage test keeps measuring exactly the built-in catalog.
+ */
+export const PERSIAN_SPECIAL_MISSIONS: Record<string, MissionCopy> = {
+  'vip-lounge': {
+    title: 'لابی VIP',
+    shortTitle: 'لابی VIP',
+    description: 'یک گفت‌وگوی ویژه با بهترین مشتری‌ات انجام بده.',
+    steps: {
+      vip_topic: {
+        label: 'موضوع',
+        question: 'در لابی VIP دربارهٔ چه چیزی صحبت کردی؟',
+        helper: 'موضوع اصلی را انتخاب کن.',
+        options: {
+          loyalty_offer: { label: 'پیشنهاد وفاداری', hint: 'قدردانی از همراهی' },
+          exclusive_preview: { label: 'پیش‌نمایش ویژه', hint: 'اولین نگاه به چیز تازه' },
+          partnership: { label: 'همکاری', hint: 'معاملهٔ بزرگ‌تر با هم' },
+          feedback: { label: 'گفت‌وگوی بازخورد', hint: 'اول شنیدن' },
+        },
+      },
+      vip_outcome: {
+        label: 'نتیجه',
+        question: 'مشتری VIP چه واکنشی داشت؟',
+        helper: 'نتیجهٔ اصلی را انتخاب کن.',
+        options: {
+          big_order: { label: 'سفارش بزرگ', hint: 'امتیاز پاداش!' },
+          loved_it: { label: 'خیلی پسندید', hint: 'واکنش مثبت' },
+          thinking: { label: 'نیاز به زمان دارد', hint: 'می‌خواهد فکر کند' },
+          no_answer: { label: 'ملاقات نشد', hint: 'امکان دیدار نبود' },
+        },
+      },
+      rating: {
+        label: 'ارزیابی',
+        question: 'این وقت VIP چقدر ارزشمند بود؟',
+        scale: ['بی‌خودی', 'بی‌حال', 'مفید', 'ارزشمند', 'پذیرایی درجه‌یک!'],
+      },
+    },
+  },
+  'midnight-route': {
+    title: 'مسیر نیمه‌شب',
+    shortTitle: 'مسیر نیمه‌شب',
+    description: 'برای مشتریانی که فقط شب می‌توانند گفت‌وگو کنند، مسیر بعد از ساعت کاری بچین.',
+    steps: {
+      route_plan: {
+        label: 'مسیر',
+        question: 'چه مسیری برنامه‌ریزی کردی؟',
+        helper: 'مسیر اصلی را انتخاب کن.',
+        options: {
+          late_shops: { label: 'فروشگاه‌های تا دیروقت', hint: 'شب‌رو' },
+          warehouse: { label: 'انبار', hint: 'یک توقف در انبار' },
+          delivery_hub: { label: 'مرکز توزیع', hint: 'جایی پرتردد' },
+          home_visits: { label: 'دیدار خانگی', hint: 'سر زدن به خانه' },
+        },
+      },
+      route_result: {
+        label: 'نتیجه',
+        question: 'مسیر نیمه‌شب چه نتیجه‌ای داشت؟',
+        helper: 'نتیجهٔ اصلی را انتخاب کن.',
+        options: {
+          surprise_order: { label: 'سفارش غافلگیرکننده', hint: 'امتیاز پاداش!' },
+          relationship: { label: 'رابطهٔ قوی‌تر', hint: 'اعتماد بیشتر' },
+          intel: { label: 'اطلاعات بازار', hint: 'شناخت بهتر بازار' },
+          nothing: { label: 'هنوز هیچ', hint: 'فعلاً بدون نتیجه' },
+        },
+      },
+      rating: {
+        label: 'ارزیابی',
+        question: 'شیفت شب ارزشش را داشت؟',
+        scale: ['هدر رفت', 'معمولی', 'قابل قبول', 'ارزشمند', 'قهرمان شب‌رو!'],
+      },
+    },
+  },
+};
+
 export const PERSIAN_DIFFICULTIES: Record<MissionDifficulty, string> = {
   easy: 'آسان', medium: 'متوسط', hard: 'سخت',
 };
@@ -291,7 +366,8 @@ function localizeStep(step: MissionStep, copy: StepCopy | undefined): MissionSte
 
 /** Return a display-only copy; IDs, flags, rewards and the stored game data remain unchanged. */
 export function localizeMission<T extends Mission>(mission: T, language: Language): T {
-  const copy = language === 'fa' ? PERSIAN_MISSIONS[mission.id] : undefined;
+  // Special missions have their own Persian map so the six-mission coverage test stays exact.
+  const copy = language === 'fa' ? PERSIAN_MISSIONS[mission.id] ?? PERSIAN_SPECIAL_MISSIONS[mission.id] : undefined;
   if (!copy) return mission;
   return {
     ...mission,

@@ -104,6 +104,28 @@ received from the BFF. These values do not create organizational points.
 - Streak: +1 for each consecutive day with a completed mission; resets after a missed day
 - Missions can be replayed (reps visit customers every day); each run is logged in history
 
+### Demo store (device-only prototype)
+
+The Store screen spends the demo coins earned on this device on two clearly marked
+**DEMO** offers:
+
+- VIP Lounge Pass — 40 coins → unlocks the *VIP Lounge* mission
+- Midnight Route Pass — 60 coins → unlocks the *Midnight Route* mission
+
+Purchased store missions are a separate catalog (`src/game/store.ts`). They never enter
+the six-mission list, map, daily pick, level or achievement counts, and they never touch
+Tribal points, the organizational wallet, the company score or real money. Buying is one
+atomic local step: an insufficient balance or a repeat purchase is rejected outright,
+and a purchase is only kept when the verified localStorage write succeeded. Purchased
+offer IDs and the reduced balance live in the existing versioned save
+(`sales-quest-arena:progress:v1`); saves written before the store simply default to
+"nothing bought" and are not reset.
+
+Server mode shows the store as **not connected**: no local purchase state is read, shown
+or uploaded. Connecting it later means calling `GET /api/v1/game/store` and
+`POST /api/v1/game/store/purchases` from the BFF and replacing the `StoreView` supplied by
+`ServerGameContext`, so prices and entitlements become server-owned.
+
 ## Architecture
 
 ```
@@ -118,7 +140,9 @@ src/
     progress.ts         Derived state: mission status, streak, daily challenge, stats
     completeMission.ts  (progress, mission, answers, time) → new progress + history entry
     storage.ts          Device-only persistence (localStorage, verified writes)
+    store.ts            Demo-store offers, special missions and the atomic purchase step
     engine.test.ts      Local rules unit tests
+    store.test.ts       Purchase, duplicate, balance and legacy-save tests
   api/                  Same-origin BFF client, error handling and completion retry records
   i18n/                 English/Persian UI strings, translated game content and locale helpers
     LanguageContext.tsx Language preference, document language and direction
@@ -132,7 +156,7 @@ src/
     play/               MissionGameplay, MissionStep, MissionResult, RewardAnimation
     art/                Avatar, Mascot ("Pip"), MissionArt, Scenery
     ui/                 Icon, Progress, Sheet, Confetti, motion helpers
-  pages/                Welcome, Arena, Missions, History, Profile, Play/Result
+  pages/                Welcome, Arena, Missions, Store, History, Profile, Play/Result
   styles/               tokens.css (design system) + one stylesheet per area
 ```
 
@@ -202,5 +226,6 @@ check and contract tests together; changing this local array does not change the
 - Real sales data (CRM visits/orders completing missions automatically)
 - Team competitions and leaderboards
 - Admin mission configuration (serve `MISSIONS` and `GAME_CONFIG` from an API)
-- A coin shop — coins are earned and stored, but there is nothing to spend them on yet
+- A server-backed coin shop — the local demo store above is a prototype; real pricing,
+  entitlements and receipts need the BFF store endpoints
 - Sound effects and more worlds on the map

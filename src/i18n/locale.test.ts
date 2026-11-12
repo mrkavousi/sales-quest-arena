@@ -5,8 +5,9 @@ import { LEVELS } from '../game/levels';
 import { collectFlags, MISSIONS, sanitizeAnswers } from '../game/missions';
 import { createInitialProgress, ensureDaily, getMissionView } from '../game/progress';
 import { REWARD_RULES } from '../game/rewards';
+import { SPECIAL_MISSIONS } from '../game/store';
 import type { Answers, MissionRecord } from '../game/types';
-import { localizeAchievement, localizeMission, localizeMissionView, PERSIAN_ACHIEVEMENTS, PERSIAN_LEVELS, PERSIAN_MISSIONS, PERSIAN_REWARDS, rewardLabel } from './content';
+import { localizeAchievement, localizeMission, localizeMissionView, PERSIAN_ACHIEVEMENTS, PERSIAN_LEVELS, PERSIAN_MISSIONS, PERSIAN_REWARDS, PERSIAN_SPECIAL_MISSIONS, rewardLabel } from './content';
 import { formatCountdown, formatDayLabel, formatNumber, keyboardDigit, resolveLanguage, translate } from './locale';
 import { EN, FA, type MessageKey } from './messages';
 
@@ -83,6 +84,27 @@ describe('Persian game content', () => {
           expect(localized.suggestions?.length ?? 0).toBe(step.suggestions?.length ?? 0);
           localized.suggestions?.forEach((suggestion) => expect(hasPersian(suggestion)).toBe(true));
         }
+      });
+    }
+  });
+
+  it('covers demo-store missions without adding them to the six-mission catalog', () => {
+    expect(Object.keys(PERSIAN_SPECIAL_MISSIONS).sort()).toEqual(SPECIAL_MISSIONS.map((mission) => mission.id).sort());
+    expect(Object.keys(PERSIAN_MISSIONS).sort()).toEqual(MISSIONS.map((mission) => mission.id).sort());
+    for (const original of SPECIAL_MISSIONS) {
+      const translated = localizeMission(original, 'fa');
+      expect(hasPersian(translated.title), original.id).toBe(true);
+      expect(hasPersian(translated.description), original.id).toBe(true);
+      expect(Object.keys(PERSIAN_SPECIAL_MISSIONS[original.id].steps).sort()).toEqual(original.steps.map((step) => step.id).sort());
+      translated.steps.forEach((step, index) => {
+        expect(step.id).toBe(original.steps[index].id);
+        expect(hasPersian(step.label), `${original.id}/${step.id} label`).toBe(true);
+        expect(hasPersian(step.question), `${original.id}/${step.id} question`).toBe(true);
+        if (step.type === 'choice' && original.steps[index].type === 'choice') {
+          expect(step.options.map((option) => option.id)).toEqual(original.steps[index].type === 'choice' ? (original.steps[index] as { options: { id: string }[] }).options.map((option) => option.id) : []);
+          step.options.forEach((option) => expect(hasPersian(option.label)).toBe(true));
+        }
+        if (step.type === 'rating') step.scale.forEach((label) => expect(hasPersian(label)).toBe(true));
       });
     }
   });

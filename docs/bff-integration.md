@@ -78,7 +78,10 @@ Switching to the device-only game is not a logout: the demo cookie remains until
 expires, is replaced, or the player uses **Sign out** on the profile screen. Signing
 out asks the server to clear the cookie, then returns to the picker with a
 confirmation; if the cookie could not be cleared the picker says so and a reload
-re-checks the session.
+re-checks the session. Only a `401` counts as an already-ended session. A `403`
+(missing or mismatched CSRF token) is reported as a failed sign-out because the
+HttpOnly cookie may still be live — the client never claims a success it cannot
+verify.
 
 **Demo account selection is not authentication.** Before any public production
 release, replace it with approved real authentication or disable demo login outside
@@ -131,6 +134,12 @@ cannot secure that backend endpoint.
   reopens the picker and leaves the cookie alone; switching to the device-only game
   never logs out. A pending completion retry record is per account and survives
   sign-out, so signing back in as the same visitor can still recover it.
+- The demo store is device-only for now. Server mode reads no local purchase state and
+  uploads none; it renders the store as not connected. Wiring it up requires
+  `GET /api/v1/game/store` (offers and prices) and `POST /api/v1/game/store/purchases`
+  (server-authorized purchase and entitlement), then replacing the `StoreView` that
+  `ServerGameContext` supplies. Until then, no local purchase may be presented as
+  trusted or server-confirmed.
 - History uses the paginated `/history` endpoint. Totals computed from history pages
   are labelled partial while more pages remain (or the history request failed);
   mission counts come from the server's mission records.
