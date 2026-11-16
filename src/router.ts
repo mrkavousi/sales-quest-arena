@@ -18,7 +18,9 @@ export type RouteName =
   | 'branch'
   | 'rep'
   | 'imports'
-  | 'import';
+  | 'import'
+  // Real-workbook import spike
+  | 'ri';
 
 export interface Route {
   name: RouteName;
@@ -38,6 +40,7 @@ const NAMES: Record<string, RouteName> = {
   rep: 'rep',
   imports: 'imports',
   import: 'import',
+  ri: 'ri',
 };
 
 export function parseRoute(hash: string): Route {

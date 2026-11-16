@@ -7,18 +7,25 @@ import { ImportsPage } from './ImportsPage';
 import { LeaderboardPage } from './LeaderboardPage';
 import { OverviewPage } from './OverviewPage';
 import { RepPage } from './RepPage';
+import { RiApp } from '../realimport/RiApp';
+import type { RiMeta } from '../realimport/types';
+import { useApi } from './ui';
 
 /** Management experience: admin, management, branch managers and supervisors (server-scoped). */
 export function ManagementApp() {
   const { user, logout } = useSession();
   const route = useRoute();
+  const isAdmin = user?.position === 'admin';
+  // The real-import spike exists only when the backend runs with KILOOS_REAL_IMPORT=1 (otherwise 404, tab hidden).
+  const spike = useApi<RiMeta>(isAdmin ? '/api/v1/ri/meta' : null);
+  const spikeOn = Boolean(spike.data?.enabled);
   if (!user) return null;
-  const isAdmin = user.position === 'admin';
   const tab = route.name === 'import' ? 'imports' : route.name === 'branch' || route.name === 'rep' || route.name === 'arena' ? 'dash' : route.name;
 
   const tabs = [
     { key: 'dash', label: 'Dashboard', path: '/' },
     ...(isAdmin ? [{ key: 'imports', label: 'Excel import', path: '/imports' }] : []),
+    ...(isAdmin && spikeOn ? [{ key: 'ri', label: 'Real import (spike)', path: '/ri' }] : []),
     { key: 'board', label: 'Leaderboard', path: '/board' },
   ];
 
@@ -54,6 +61,8 @@ export function ManagementApp() {
           <ImportsPage />
         ) : route.name === 'import' && route.param && isAdmin ? (
           <ImportPage key={route.param} importId={route.param} />
+        ) : route.name === 'ri' && isAdmin && spikeOn ? (
+          <RiApp batchId={route.param} />
         ) : route.name === 'board' ? (
           <LeaderboardPage onOpenRep={(id) => navigate(`/rep/${id}`)} />
         ) : (
