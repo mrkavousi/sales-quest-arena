@@ -63,9 +63,11 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
       return;
     }
     setFinishing(true);
-    const entry = finishMission(mission.id, answers);
-    if (entry) navigate(`/result/${entry.id}`, { replace: true });
-    else setFinishing(false);
+    // Local mode resolves immediately; server mode resolves once the backend has confirmed the rewards.
+    void Promise.resolve(finishMission(mission.id, answers)).then((entry) => {
+      if (entry) navigate(`/result/${entry.id}`, { replace: true });
+      else setFinishing(false);
+    });
   }, [answers, canContinue, finishMission, index, isLast, mission.id, saveDraft]);
 
   const goBack = useCallback(() => {
@@ -93,7 +95,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, pauseOpen, setAnswer, step]);
 
-  const cta = isLast ? 'Complete mission' : step.type === 'note' && !answered ? 'Skip' : 'Continue';
+  const cta = isLast ? (finishing ? 'Confirming with server…' : 'Complete mission') : step.type === 'note' && !answered ? 'Skip' : 'Continue';
 
   return (
     <div className="play" style={{ '--c': meta.color, '--d': meta.dark, '--soft': meta.soft } as CSSProperties}>

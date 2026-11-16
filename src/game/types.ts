@@ -63,6 +63,8 @@ export interface MissionUnlockRule {
   afterMission?: string;
   /** Minimum player level. */
   minLevel?: number;
+  /** Server-verified rule on processed sales (server mode only; evaluated by the backend). */
+  salesGate?: { type: string; minPct: number };
 }
 
 export interface MissionCompletionConditions {
@@ -99,6 +101,31 @@ export interface MissionView extends Mission {
   draftProgress: number;
   isDaily: boolean;
   dailyDone: boolean;
+  /** Server-computed sales eligibility details (server mode, sales-driven missions only). */
+  salesGateInfo?: SalesGateInfo;
+}
+
+export interface SalesGateInfo {
+  eligible: boolean;
+  period: string | null;
+  achieved?: number;
+  target?: number;
+  attainmentPct?: number | null;
+  minPct: number;
+  status: string;
+  reason?: string | null;
+}
+
+/** Organizational points awarded by the server through the append-only score ledger. */
+export interface OrgPointsAward {
+  points: number;
+  ruleCode: string;
+  ruleVersion: number;
+  approvalStatus: string;
+  period: string;
+  isDemo: boolean;
+  eventId: string;
+  created: boolean;
 }
 
 /* ---------- Rewards ---------- */
@@ -147,6 +174,8 @@ export interface HistoryEntry {
   levelAfter: number;
   streakAfter: number;
   achievementsUnlocked: string[];
+  /** Set by the server for sales-verified missions. Game XP and org points stay separate. */
+  orgPoints?: OrgPointsAward;
 }
 
 export interface DailyChallengeState {

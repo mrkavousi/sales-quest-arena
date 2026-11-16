@@ -94,7 +94,14 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
             </p>
           )}
 
-          {locked ? (
+          {mission.salesGateInfo && (
+            <p className="detail__hint" data-testid="sales-gate">
+              <span aria-hidden="true">📈</span> Server check: <b>{mission.salesGateInfo.attainmentPct ?? 0}%</b> of your {mission.salesGateInfo.period ?? ''} target
+              (needs {mission.salesGateInfo.minPct}%) · <em>{mission.salesGateInfo.status} demo rule</em>
+            </p>
+          )}
+
+          {locked || (mission.status === 'completed' && mission.lockReason) ? (
             <div className="detail__locked">
               <Icon name="lock" size={18} />
               {mission.lockReason}

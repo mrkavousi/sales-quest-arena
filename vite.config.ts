@@ -13,7 +13,13 @@ export default defineConfig(({ mode }) => {
       outDir: standalone ? 'standalone' : 'dist',
       assetsInlineLimit: standalone ? 100_000_000 : 4096,
     },
-    server: { host: '0.0.0.0', port: 5173, allowedHosts: true as const },
+    server: {
+      host: '0.0.0.0',
+      port: 5173,
+      allowedHosts: true as const,
+      // Dev convenience for server mode: same-origin /api served by the FastAPI backend.
+      proxy: { '/api': 'http://localhost:8000', '/health': 'http://localhost:8000' },
+    },
     preview: { host: '0.0.0.0', port: 4173, allowedHosts: true as const },
   };
 });

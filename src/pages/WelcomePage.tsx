@@ -6,11 +6,13 @@ import { buzz } from '../components/ui/motion';
 import { AVATAR_IDS } from '../game/progress';
 import type { AvatarId } from '../game/types';
 import { useGame } from '../state/GameContext';
+import { useOptionalSession } from '../state/SessionContext';
 
 /** First launch: pick a hero and enter the arena. */
 export function WelcomePage() {
   const { completeOnboarding } = useGame();
-  const [name, setName] = useState('');
+  const session = useOptionalSession();
+  const [name, setName] = useState(() => (session?.user?.name ?? '').slice(0, 24));
   const [avatar, setAvatar] = useState<AvatarId>('fox');
 
   // Deliberately not a <form>: sandboxed embeds block form submission.

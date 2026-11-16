@@ -1,11 +1,22 @@
 import type { ReactNode } from 'react';
 import type { RouteName } from '../router';
 import { useGame } from '../state/GameContext';
+import { useOptionalSession } from '../state/SessionContext';
 import { Icon, type IconName } from './ui/Icon';
 
 const TABS: { route: RouteName; href: string; label: string; icon: IconName }[] = [
   { route: 'arena', href: '#/', label: 'Arena', icon: 'shield' },
   { route: 'missions', href: '#/missions', label: 'Missions', icon: 'target' },
+  { route: 'history', href: '#/history', label: 'History', icon: 'scroll' },
+  { route: 'profile', href: '#/profile', label: 'Profile', icon: 'user' },
+];
+
+/** Server-mode tabs: the representative also gets the performance dashboard and the leaderboard. */
+const SERVER_TABS: { route: RouteName; href: string; label: string; icon: IconName }[] = [
+  { route: 'arena', href: '#/', label: 'Arena', icon: 'shield' },
+  { route: 'missions', href: '#/missions', label: 'Missions', icon: 'target' },
+  { route: 'me', href: '#/me', label: 'Sales', icon: 'box' },
+  { route: 'board', href: '#/board', label: 'Ranking', icon: 'trophy' },
   { route: 'history', href: '#/history', label: 'History', icon: 'scroll' },
   { route: 'profile', href: '#/profile', label: 'Profile', icon: 'user' },
 ];
@@ -40,14 +51,17 @@ export function StorageBanner() {
 }
 
 export function AppLayout({ route, children }: { route: RouteName; children: ReactNode }) {
+  const { mode } = useGame();
+  const session = useOptionalSession();
+  const tabs = mode === 'server' ? SERVER_TABS : TABS;
   return (
     <div className="shell">
       <nav className="nav" aria-label="Main">
         <div className="nav__brand">
           <Logo />
         </div>
-        <div className="nav__tabs">
-          {TABS.map((tab) => (
+        <div className="nav__tabs" style={mode === 'server' ? { gridTemplateColumns: 'repeat(6, 1fr)' } : undefined}>
+          {tabs.map((tab) => (
             <a key={tab.route} href={tab.href} className={`nav__tab${route === tab.route ? ' is-active' : ''}`} aria-current={route === tab.route ? 'page' : undefined}>
               <span className="nav__icon">
                 <Icon name={tab.icon} size={24} />
@@ -56,6 +70,15 @@ export function AppLayout({ route, children }: { route: RouteName; children: Rea
             </a>
           ))}
         </div>
+        {mode === 'server' && session?.user && (
+          <div className="nav__session">
+            <span dir="auto">{session.user.name}</span>
+            <small>{session.user.employee_code} · DEMO</small>
+            <button className="linkbtn" onClick={() => void session.logout()}>
+              Sign out
+            </button>
+          </div>
+        )}
       </nav>
       <main className="shell__main">
         <StorageBanner />

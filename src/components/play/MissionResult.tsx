@@ -93,6 +93,16 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
           </div>
         </div>
 
+        {entry.orgPoints && (
+          <div className="result__org" role="note" data-testid="org-points">
+            <b>+{entry.orgPoints.points} organizational points</b>
+            <span>
+              Server-verified from your processed {entry.orgPoints.period} sales · recorded in the score ledger ·{' '}
+              <em>{entry.orgPoints.approvalStatus} DEMO RULE — needs business approval, not a financial reward</em>
+            </span>
+          </div>
+        )}
+
         <ul className="result__lines" aria-label="Reward breakdown">
           {entry.rewards.lines.map((line, i) => (
             <li key={line.ruleId} style={{ '--i': i } as CSSProperties}>

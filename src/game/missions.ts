@@ -352,7 +352,17 @@ export const MISSIONS: Mission[] = [
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-const BY_ID = new Map(MISSIONS.map((m) => [m.id, m]));
+const BY_ID = new Map<string, Mission>(MISSIONS.map((m) => [m.id, m]));
+
+/**
+ * Server mode: the backend owns the mission catalog (including sales-driven missions that do
+ * not exist in this static list). Registering them lets every screen resolve a mission id.
+ */
+export function registerMissions(list: Mission[]): void {
+  // Keep the first registration: definitions are static per server version, and a stable object
+  // identity stops screens from re-running effects every time a server response arrives.
+  for (const mission of list) if (!BY_ID.has(mission.id)) BY_ID.set(mission.id, mission);
+}
 
 export function getMission(id: string): Mission | undefined {
   return BY_ID.get(id);

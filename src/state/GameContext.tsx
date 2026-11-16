@@ -16,7 +16,9 @@ export interface ToastMessage {
   tone: 'info' | 'warn' | 'success';
 }
 
-interface GameContextValue {
+export interface GameContextValue {
+  /** local = browser-only prototype · server = FastAPI is authoritative (Kiloos demo). */
+  mode: 'local' | 'server';
   progress: PlayerProgress;
   todayKey: string;
   missions: MissionView[];
@@ -30,11 +32,12 @@ interface GameContextValue {
   startMission: (missionId: string) => boolean;
   saveDraft: (missionId: string, stepIndex: number, answers: Answers) => void;
   discardDraft: (missionId: string) => void;
-  finishMission: (missionId: string, answers: Answers) => HistoryEntry | null;
+  /** Server mode resolves asynchronously after the backend confirms the rewards. */
+  finishMission: (missionId: string, answers: Answers) => HistoryEntry | null | Promise<HistoryEntry | null>;
   resetProgress: () => void;
 }
 
-const GameContext = createContext<GameContextValue | null>(null);
+export const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [boot] = useState(() => {
@@ -177,6 +180,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<GameContextValue>(
     () => ({
+      mode: 'local' as const,
       progress,
       todayKey,
       missions: getMissionViews(progress, todayKey),

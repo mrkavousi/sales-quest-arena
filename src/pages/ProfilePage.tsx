@@ -11,7 +11,7 @@ import { AVATAR_IDS } from '../game/progress';
 import { useGame } from '../state/GameContext';
 
 export function ProfilePage() {
-  const { progress, level, stats, persistence, updatePlayer, resetProgress, toast } = useGame();
+  const { mode, progress, level, stats, persistence, updatePlayer, resetProgress, toast } = useGame();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(progress.player.name);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -110,11 +110,17 @@ export function ProfilePage() {
         <header className="panel__head"><h2>Save data</h2></header>
         <p className={`savestate savestate--${persistence}`}>
           <i />
-          {persistence === 'saved' ? 'Progress is saved on this device.' : 'Progress is NOT being saved in this browser.'}
+          {mode === 'server'
+            ? 'Progress is stored and confirmed by the Kiloos server (demo data).'
+            : persistence === 'saved'
+              ? 'Progress is saved on this device.'
+              : 'Progress is NOT being saved in this browser.'}
         </p>
-        <button className="btn btn--ghost btn--sm btn--danger" onClick={() => setResetOpen(true)}>
-          <Icon name="trash" size={16} /> Reset all progress
-        </button>
+        {mode === 'local' && (
+          <button className="btn btn--ghost btn--sm btn--danger" onClick={() => setResetOpen(true)}>
+            <Icon name="trash" size={16} /> Reset all progress
+          </button>
+        )}
       </section>
 
       <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} label="Choose your hero" size="sm">

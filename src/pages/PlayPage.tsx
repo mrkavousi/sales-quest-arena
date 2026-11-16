@@ -22,7 +22,9 @@ export function PlayPage({ missionId }: { missionId: string | null }) {
       return;
     }
     setReady(true);
-  }, [mission, startMission, toast]);
+    // Keyed by id: a refreshed mission object must never re-open (or re-create) a finished run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mission?.id, startMission, toast]);
 
   if (!mission || !ready) return null;
   return <MissionGameplay mission={mission} />;

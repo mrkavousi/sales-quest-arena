@@ -7,6 +7,7 @@ import './styles/ui.css';
 import './styles/arena.css';
 import './styles/pages.css';
 import './styles/play.css';
+import './styles/kiloos.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

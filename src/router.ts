@@ -5,7 +5,20 @@ import { useSyncExternalStore } from 'react';
  * The route lives in memory and is mirrored to the URL hash on a best-effort basis,
  * so the game keeps working inside sandboxed embeds where URL updates are restricted.
  */
-export type RouteName = 'arena' | 'missions' | 'history' | 'profile' | 'play' | 'result';
+export type RouteName =
+  | 'arena'
+  | 'missions'
+  | 'history'
+  | 'profile'
+  | 'play'
+  | 'result'
+  // Kiloos server mode (employee + management experiences)
+  | 'me'
+  | 'board'
+  | 'branch'
+  | 'rep'
+  | 'imports'
+  | 'import';
 
 export interface Route {
   name: RouteName;
@@ -19,6 +32,12 @@ const NAMES: Record<string, RouteName> = {
   profile: 'profile',
   play: 'play',
   result: 'result',
+  me: 'me',
+  board: 'board',
+  branch: 'branch',
+  rep: 'rep',
+  imports: 'imports',
+  import: 'import',
 };
 
 export function parseRoute(hash: string): Route {
