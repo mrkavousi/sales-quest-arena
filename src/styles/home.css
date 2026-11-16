@@ -1,0 +1,192 @@
+/* ---------- Player home (Kiloos demo): weekly quests, rank, activity, level-up ---------- */
+
+.demo-tag {
+  display: inline-block;
+  flex: none;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #6b4b00;
+  background: var(--yellow-soft);
+  border: 2px solid var(--yellow);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+/* Right-hand column of the arena: stacked panels with a single rhythm (no ".panel + .panel" margins). */
+.arena__side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.arena__side > .panel + .panel { margin-top: 0; }
+
+@media (min-width: 960px) {
+  .arena__grid {
+    grid-template-areas: 'map daily' 'map side';
+    grid-template-rows: auto 1fr;
+  }
+  .arena__side { grid-area: side; }
+}
+
+/* ---------- Weekly quests ---------- */
+.quests__meta { margin: -6px 0 12px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.quests__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+.quest {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 2px solid var(--line);
+}
+.quest--claimable { border-color: var(--green); background: var(--green-soft); }
+.quest--claimed { opacity: 0.7; }
+
+.quest__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.quest--claimable .quest__icon { background: var(--green); color: #fff; }
+
+.quest__body { min-width: 0; }
+.quest__title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.quest__title b { font-size: 15px; color: var(--ink); }
+.quest__xp { flex: none; font-size: 13px; font-weight: 900; color: var(--yellow-dark); white-space: nowrap; }
+.quest p { margin: 2px 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+.quest__progress { display: flex; align-items: center; gap: 10px; }
+.quest__progress .bar { flex: 1; min-width: 0; }
+.quest__progress small { min-width: 30px; text-align: end; font-size: 12px; font-weight: 800; color: var(--ink-2); }
+
+.quest__claim {
+  flex: none;
+  white-space: nowrap;
+  min-width: 96px;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  background: var(--line);
+  color: var(--ink-3);
+  cursor: default;
+}
+.quest__claim.is-ready {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--green-dark);
+  cursor: pointer;
+}
+.quest__claim.is-ready:hover { filter: brightness(1.06); }
+.quest__claim.is-ready:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--green-dark); }
+.quest__claim:disabled:not(.is-ready) { opacity: 0.8; }
+.quest__claim.is-ready:disabled { opacity: 0.6; cursor: wait; }
+
+/* ---------- Ranking card ---------- */
+.rank-card__body { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+.rank-card__pos {
+  display: grid;
+  justify-items: center;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--primary), var(--indigo-700));
+  color: #fff;
+  min-width: 92px;
+}
+.rank-card__pos small { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+.rank-card__pos b { font-size: 34px; line-height: 1.05; font-weight: 900; }
+.rank-card__pos span { font-size: 12px; font-weight: 700; opacity: 0.9; }
+.rank-card__stats { margin: 0; display: grid; gap: 8px; }
+.rank-card__stats div { display: flex; justify-content: space-between; gap: 12px; }
+.rank-card__stats dt { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.rank-card__stats dd { margin: 0; font-size: 16px; font-weight: 900; color: var(--ink); }
+.rank-card__note { margin: 0; font-size: 13px; color: var(--ink-2); }
+.rank-card__more { margin-top: 10px; }
+
+/* ---------- Recent activity ---------- */
+.activity__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.activity__item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.activity__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.activity__item--quest .activity__icon { background: var(--green-soft); color: var(--green-dark); }
+.activity__item--achievement .activity__icon { background: var(--yellow-soft); color: var(--yellow-dark); }
+.activity__body { min-width: 0; display: grid; }
+.activity__body b { font-size: 14px; color: var(--ink); overflow-wrap: anywhere; }
+.activity__body small { font-size: 12px; color: var(--ink-2); }
+.activity__xp { font-size: 13px; font-weight: 900; color: var(--yellow-dark); white-space: nowrap; }
+.activity__empty { margin: 0; font-size: 13px; color: var(--ink-2); }
+.activity__more { margin-top: 10px; }
+
+/* ---------- Level-up overlay ---------- */
+.levelup {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(22, 12, 64, 0.6);
+  animation: levelup-fade 220ms ease-out both;
+}
+.levelup__card {
+  position: relative;
+  width: min(420px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 24px 22px;
+  border-radius: 28px;
+  background: var(--surface);
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(10, 4, 40, 0.45);
+  animation: levelup-pop 520ms var(--ease-spring) both;
+}
+.levelup__kicker { font-size: 13px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary); }
+.levelup__badge {
+  display: grid;
+  place-items: center;
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  margin: 6px 0;
+  font-size: 56px;
+  font-weight: 900;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #ffffff55, transparent 45%), var(--lc, var(--primary));
+  box-shadow: 0 0 0 6px #fff, 0 0 0 10px var(--lc, var(--primary)), 0 18px 30px rgba(0, 0, 0, 0.25);
+  animation: levelup-spin 900ms var(--ease-spring) both;
+}
+.levelup__card h2 { margin: 0; font-size: 24px; color: var(--ink); }
+.levelup__card p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.levelup__badges { list-style: none; margin: 4px 0 6px; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.levelup__badges li { font-size: 13px; font-weight: 800; color: #6b4b00; background: var(--yellow-soft); border: 2px solid var(--yellow); border-radius: 999px; padding: 3px 10px; }
+.levelup__card .btn { margin-top: 8px; }
+
+@keyframes levelup-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes levelup-pop { from { transform: scale(0.82) translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes levelup-spin { from { transform: rotate(-200deg) scale(0.4); } to { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .levelup, .levelup__card, .levelup__badge { animation: none; }
+}

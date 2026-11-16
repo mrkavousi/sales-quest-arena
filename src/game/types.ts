@@ -178,6 +178,43 @@ export interface HistoryEntry {
   orgPoints?: OrgPointsAward;
 }
 
+/** Weekly quest (DEMO). Progress and claims are computed by the server; rewards are game XP only. */
+export interface WeeklyQuest {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  objective: { type: string; target: number; category?: string };
+  progress: number;
+  target: number;
+  complete: boolean;
+  status: 'in_progress' | 'claimable' | 'claimed';
+  claimed: boolean;
+  claimedAt: string | null;
+  rewardXp: number;
+}
+
+export interface WeeklyQuests {
+  label: 'DEMO';
+  weekKey: string;
+  weekStart: string;
+  weekEnd: string;
+  quests: WeeklyQuest[];
+}
+
+/** Server response for a quest claim: XP and level are the server's numbers, shown as received. */
+export interface QuestClaim {
+  quest_id: string;
+  week_key: string;
+  xp: number;
+  xp_before: number;
+  xp_after: number;
+  level_before: number;
+  level_after: number;
+  achievements_unlocked: string[];
+  claimed_at: string;
+}
+
 export interface DailyChallengeState {
   /** Local date key (YYYY-MM-DD) the challenge belongs to. */
   date: string;

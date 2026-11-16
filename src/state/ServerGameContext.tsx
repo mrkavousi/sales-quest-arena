@@ -4,13 +4,14 @@ import { api, ApiError, newIdempotencyKey, setCsrfToken } from '../api/client';
 import { getLevelInfo } from '../game/levels';
 import { getMission, registerMissions, sanitizeAnswers } from '../game/missions';
 import { getPlayerStats } from '../game/progress';
-import type { Answers, AvatarId, HistoryEntry, Mission, MissionView, PlayerProgress } from '../game/types';
+import type { Answers, AvatarId, HistoryEntry, Mission, MissionView, PlayerProgress, QuestClaim, WeeklyQuests } from '../game/types';
 import { useSession } from './SessionContext';
 import { GameContext, type GameContextValue, type ToastMessage } from './GameContext';
 
 interface Snapshot {
   progress: PlayerProgress;
   missions: MissionView[];
+  quests: WeeklyQuests | null;
   dateKey: string;
 }
 
@@ -19,16 +20,22 @@ interface Bootstrap {
   date_key: string;
   progress: PlayerProgress;
   missions: MissionView[];
+  quests?: WeeklyQuests;
 }
 
 interface MissionsPayload {
   progress: PlayerProgress;
   missions: MissionView[];
+  quests?: WeeklyQuests;
   date_key?: string;
 }
 
 interface CompletionPayload extends MissionsPayload {
   entry: HistoryEntry;
+}
+
+interface QuestClaimPayload extends MissionsPayload {
+  claim: QuestClaim;
 }
 
 const DRAFT_DEBOUNCE_MS = 450;
@@ -51,6 +58,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
   const draftTimers = useRef(new Map<string, number>());
   const draftInflight = useRef(new Map<string, Promise<unknown>>());
   const completionKeys = useRef(new Map<string, string>());
+  const claimKeys = useRef(new Map<string, string>());
 
   const toast = useCallback((text: string, tone: ToastMessage['tone'] = 'info') => {
     const id = ++toastId.current;
@@ -64,6 +72,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
     const next: Snapshot = {
       progress: payload.progress,
       missions: payload.missions,
+      quests: payload.quests ?? prev?.quests ?? null,
       dateKey: payload.date_key ?? prev?.dateKey ?? new Date().toISOString().slice(0, 10),
     };
     snapRef.current = next;
@@ -245,12 +254,42 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
     [apply, fail, load, toast],
   );
 
+  const claimQuest = useCallback(
+    async (questId: string): Promise<QuestClaim | null> => {
+      // Same claim, same key: tapping again after a dropped connection replays the stored result.
+      let key = claimKeys.current.get(questId);
+      if (!key) {
+        key = newIdempotencyKey();
+        claimKeys.current.set(questId, key);
+      }
+      try {
+        const result = await api.post<QuestClaimPayload>(`/api/v1/game/quests/${questId}/claim`, {}, { idempotencyKey: key });
+        claimKeys.current.delete(questId);
+        apply(result);
+        return result.claim;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          claimKeys.current.delete(questId);
+          toast(err.message, 'warn');
+          void load();
+        } else if (err instanceof ApiError && err.isNetwork) {
+          toast('No connection — the quest is still claimable. Tap again to retry; you will not be paid twice.', 'warn');
+        } else {
+          fail(err, 'The server could not confirm this quest. Please try again.');
+        }
+        return null;
+      }
+    },
+    [apply, fail, load, toast],
+  );
+
   const resetProgress = useCallback(() => {
     toast('Server-confirmed progress cannot be reset from the app.', 'info');
   }, [toast]);
 
   const progress = snap?.progress;
   const todayKey = snap?.dateKey ?? '';
+  const quests = snap?.quests ?? null;
   const value = useMemo<GameContextValue | null>(() => {
     if (!snap || !progress) return null;
     return {
@@ -270,8 +309,10 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       discardDraft,
       finishMission,
       resetProgress,
+      quests,
+      claimQuest,
     };
-  }, [snap, progress, todayKey, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, discardDraft, finishMission, resetProgress]);
+  }, [snap, progress, todayKey, quests, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, discardDraft, finishMission, resetProgress, claimQuest]);
 
   if (!value) {
     return (

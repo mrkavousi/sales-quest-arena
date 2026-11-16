@@ -8,6 +8,7 @@ import './styles/arena.css';
 import './styles/pages.css';
 import './styles/play.css';
 import './styles/kiloos.css';
+import './styles/home.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

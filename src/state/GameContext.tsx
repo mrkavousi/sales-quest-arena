@@ -5,7 +5,7 @@ import { getLevelInfo, type LevelInfo } from '../game/levels';
 import { getMission } from '../game/missions';
 import { createInitialProgress, ensureDaily, getLockReason, getMissionViews, getPlayerStats, type PlayerStats } from '../game/progress';
 import { clearProgress, isStorageAvailable, loadProgress, saveProgress } from '../game/storage';
-import type { Answers, AvatarId, HistoryEntry, MissionView, PlayerProgress } from '../game/types';
+import type { Answers, AvatarId, HistoryEntry, MissionView, PlayerProgress, QuestClaim, WeeklyQuests } from '../game/types';
 
 /** 'saved' = verified on disk · 'unavailable' = browser blocks storage · 'error' = last write failed */
 export type PersistenceState = 'saved' | 'unavailable' | 'error';
@@ -35,9 +35,17 @@ export interface GameContextValue {
   /** Server mode resolves asynchronously after the backend confirms the rewards. */
   finishMission: (missionId: string, answers: Answers) => HistoryEntry | null | Promise<HistoryEntry | null>;
   resetProgress: () => void;
+  /** Weekly quests are server-computed (server mode only; null in the local prototype). */
+  quests: WeeklyQuests | null;
+  /** Claims a completed quest on the server. Resolves to the server's claim, or null if refused. */
+  claimQuest: (questId: string) => Promise<QuestClaim | null>;
 }
 
 export const GameContext = createContext<GameContextValue | null>(null);
+
+async function noQuestClaims(): Promise<QuestClaim | null> {
+  return null;
+}
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [boot] = useState(() => {
@@ -196,6 +204,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       discardDraft,
       finishMission,
       resetProgress,
+      quests: null,
+      claimQuest: noQuestClaims,
     }),
     [progress, todayKey, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, discardDraft, finishMission, resetProgress],
   );
