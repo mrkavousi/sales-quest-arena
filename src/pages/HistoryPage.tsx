@@ -3,15 +3,20 @@ import { Mascot } from '../components/art/Mascot';
 import { CATEGORY_ICON } from '../components/art/MissionArt';
 import { Stars } from '../components/MissionBits';
 import { CoinIcon, Icon, XpIcon } from '../components/ui/Icon';
-import { formatDayLabel, formatTime } from '../game/dates';
+import { useLanguage } from '../i18n/LanguageContext';
+import { formatTime } from '../game/dates';
+import { formatDayLabel } from '../i18n/locale';
 import { CATEGORIES, getMission } from '../game/missions';
+import { localizeMission } from '../i18n/content';
 import type { HistoryEntry } from '../game/types';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 
 function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
-  const mission = getMission(entry.missionId);
-  if (!mission) return null; // mission was removed from the catalog
+  const { t, language } = useLanguage();
+  const rawMission = getMission(entry.missionId);
+  if (!rawMission) return null; // mission was removed from the catalog
+  const mission = localizeMission(rawMission, language);
   const meta = CATEGORIES[mission.category];
   const note = mission.steps.find((s) => s.type === 'note');
   const noteText = note ? entry.answers[note.id] : undefined;
@@ -47,8 +52,8 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
         <div className="hcard__rewards">
           <span className="hcard__reward"><XpIcon size={16} />+{entry.rewards.xp} XP</span>
           <span className="hcard__reward"><CoinIcon size={16} />+{entry.rewards.coins}</span>
-          {entry.wasDaily && <span className="pill pill--daily">Daily bonus</span>}
-          {entry.levelAfter > entry.levelBefore && <span className="pill pill--level">Level {entry.levelAfter}!</span>}
+          {entry.wasDaily && <span className="pill pill--daily">{t('history.dailyBonus')}</span>}
+          {entry.levelAfter > entry.levelBefore && <span className="pill pill--level">{t('history.level', { level: entry.levelAfter })}</span>}
         </div>
       </div>
     </li>
@@ -57,9 +62,10 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
 
 export function HistoryPage() {
   const { progress, stats } = useGame();
+  const { t, language } = useLanguage();
   const groups: { label: string; entries: HistoryEntry[] }[] = [];
   for (const entry of progress.history) {
-    const label = formatDayLabel(entry.completedAt);
+    const label = formatDayLabel(language, entry.completedAt);
     const last = groups[groups.length - 1];
     if (last && last.label === label) last.entries.push(entry);
     else groups.push({ label, entries: [entry] });
@@ -69,25 +75,25 @@ export function HistoryPage() {
   return (
     <div className="pagebody">
       <header className="pagehead">
-        <h1>Mission History</h1>
-        <p>Every quest you have completed, newest first.</p>
+        <h1>{t('history.title')}</h1>
+        <p>{t('history.subtitle')}</p>
       </header>
 
       {progress.history.length === 0 ? (
         <div className="empty">
           <Mascot size={110} mood="think" />
-          <h2>No missions yet</h2>
-          <p>Complete your first mission and it will show up here.</p>
+          <h2>{t('history.emptyTitle')}</h2>
+          <p>{t('history.emptyText')}</p>
           <button className="btn btn--green" onClick={() => navigate('/')}>
-            Go to the arena
+            {t('history.goArena')}
           </button>
         </div>
       ) : (
         <>
           <div className="summary">
-            <div><b>{stats.missionsCompleted}</b><span>Missions</span></div>
-            <div><b>{xpFromMissions}</b><span>XP earned</span></div>
-            <div><b>{stats.ordersLogged}</b><span>Orders</span></div>
+            <div><b>{stats.missionsCompleted}</b><span>{t('nav.missions')}</span></div>
+            <div><b>{xpFromMissions}</b><span>{t('history.xpEarned')}</span></div>
+            <div><b>{stats.ordersLogged}</b><span>{t('history.orders')}</span></div>
           </div>
           {groups.map((group) => (
             <section key={group.label} className="hgroup">

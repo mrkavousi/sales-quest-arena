@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export type MascotMood = 'idle' | 'happy' | 'cheer' | 'think' | 'sad';
 
@@ -14,6 +15,7 @@ interface MascotProps {
  */
 export function Mascot({ size = 96, mood = 'idle', className }: MascotProps) {
   const gid = useId().replace(/:/g, '');
+  const { t } = useLanguage();
   const ink = '#221556';
   const smiling = mood === 'happy' || mood === 'cheer';
   return (
@@ -23,7 +25,7 @@ export function Mascot({ size = 96, mood = 'idle', className }: MascotProps) {
       height={size * (130 / 120)}
       viewBox="0 0 120 130"
       role="img"
-      aria-label="Pip, your arena guide"
+      aria-label={t('mascot.description')}
     >
       <defs>
         <linearGradient id={`body${gid}`} x1="0" y1="0" x2="0" y2="1">

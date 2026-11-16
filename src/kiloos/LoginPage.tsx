@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { DemoUser } from '../api/types';
 import { Logo } from '../components/AppLayout';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
+import { useLanguage } from '../i18n/LanguageContext';
+import type { MessageKey } from '../i18n/messages';
 import { useSession } from '../state/SessionContext';
 import { DemoBanner } from './ui';
 
@@ -10,17 +13,18 @@ interface DemoUsers {
   users: DemoUser[];
 }
 
-const SECTIONS: { title: string; hint: string; match: (u: DemoUser) => boolean }[] = [
-  { title: 'Administrator', hint: 'Imports the Excel workbook and sees everything', match: (u) => u.position === 'admin' },
-  { title: 'Management', hint: 'Organization-wide dashboards', match: (u) => u.position === 'management' },
-  { title: 'Branch managers', hint: 'Their branch only', match: (u) => u.position === 'branch_manager' },
-  { title: 'Supervisors', hint: 'Their own team only', match: (u) => u.position === 'supervisor' },
-  { title: 'Sales representatives', hint: 'Employee dashboard and Sales Quest Arena', match: (u) => u.position === 'rep' },
+const SECTIONS: { title: MessageKey; hint: MessageKey; match: (u: DemoUser) => boolean }[] = [
+  { title: 'k.login.secAdmin', hint: 'k.login.secAdminHint', match: (u) => u.position === 'admin' },
+  { title: 'k.login.secMgmt', hint: 'k.login.secMgmtHint', match: (u) => u.position === 'management' },
+  { title: 'k.login.secBranch', hint: 'k.login.secBranchHint', match: (u) => u.position === 'branch_manager' },
+  { title: 'k.login.secSup', hint: 'k.login.secSupHint', match: (u) => u.position === 'supervisor' },
+  { title: 'k.login.secRep', hint: 'k.login.secRepHint', match: (u) => u.position === 'rep' },
 ];
 
 /** Demo account picker. Real login (SSO/OTP) is explicitly out of scope for the demo. */
 export function LoginPage({ expired }: { expired?: boolean }) {
   const { login } = useSession();
+  const { t } = useLanguage();
   const [data, setData] = useState<DemoUsers | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export function LoginPage({ expired }: { expired?: boolean }) {
     try {
       await login(user.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed.');
+      setError(err instanceof Error ? err.message : t('k.signInFailed'));
       setBusy(null);
     }
   };
@@ -46,13 +50,16 @@ export function LoginPage({ expired }: { expired?: boolean }) {
   return (
     <div className="k-login">
       <div className="k-login__card">
-        <Logo />
-        <h1>Kiloos demo</h1>
-        <p className="k-muted">Pick a demo account. This is the live management demonstration — sign in as different roles to see what each one sees.</p>
+        <div className="k-login__top">
+          <Logo />
+          <LanguageSwitcher />
+        </div>
+        <h1>{t('k.login.title')}</h1>
+        <p className="k-muted">{t('k.login.intro')}</p>
         <DemoBanner notice={data?.notice} />
         {expired && (
           <div className="k-state k-state--error" role="alert">
-            <p>Your session expired. Please sign in again.</p>
+            <p>{t('k.login.expired')}</p>
           </div>
         )}
         {error && (
@@ -72,7 +79,7 @@ export function LoginPage({ expired }: { expired?: boolean }) {
             return (
               <section key={section.title} className="k-login__group">
                 <h2>
-                  {section.title} <small>{section.hint}</small>
+                  {t(section.title)} <small>{t(section.hint)}</small>
                 </h2>
                 <div className="k-login__list">
                   {users.map((user) => (
@@ -83,7 +90,7 @@ export function LoginPage({ expired }: { expired?: boolean }) {
                         {user.branch_name ? ` · ${user.branch_name}` : ''}
                       </span>
                       {user.employee_code && <em>{user.employee_code}</em>}
-                      {busy === user.id && <i className="k-login__busy">Signing in…</i>}
+                      {busy === user.id && <i className="k-login__busy">{t('k.login.signingIn')}</i>}
                     </button>
                   ))}
                 </div>

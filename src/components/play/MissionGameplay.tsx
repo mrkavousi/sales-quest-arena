@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { CATEGORIES, isStepAnswered, isStepRequired } from '../../game/missions';
+import { useLanguage } from '../../i18n/LanguageContext';
 import type { Answers, AnswerValue, Mission, MissionDraft } from '../../game/types';
 import { navigate } from '../../router';
 import { useGame } from '../../state/GameContext';
@@ -30,6 +31,7 @@ function moodFor(mission: Mission, index: number, answers: Answers): MascotMood 
 
 export function MissionGameplay({ mission }: { mission: Mission }) {
   const { progress, saveDraft, discardDraft, finishMission } = useGame();
+  const { t } = useLanguage();
   const [answers, setAnswers] = useState<Answers>(() => progress.drafts[mission.id]?.answers ?? {});
   const [index, setIndex] = useState(() => resumeIndex(mission, progress.drafts[mission.id]));
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
@@ -95,16 +97,22 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, pauseOpen, setAnswer, step]);
 
-  const cta = isLast ? (finishing ? 'Confirming with server…' : 'Complete mission') : step.type === 'note' && !answered ? 'Skip' : 'Continue';
+  const cta = isLast
+    ? finishing
+      ? t('k.g.confirming')
+      : t('play.complete')
+    : step.type === 'note' && !answered
+      ? t('play.skip')
+      : t('common.continue');
 
   return (
     <div className="play" style={{ '--c': meta.color, '--d': meta.dark, '--soft': meta.soft } as CSSProperties}>
       <div className="play__stage">
         <header className="play__top">
-          <button className="iconbtn" onClick={() => setPauseOpen(true)} aria-label="Pause mission">
+          <button className="iconbtn" onClick={() => setPauseOpen(true)} aria-label={t('play.pause')}>
             <Icon name="close" size={22} />
           </button>
-          <div className="play__progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index + (answered ? 1 : 0)} aria-label="Mission progress">
+          <div className="play__progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index + (answered ? 1 : 0)} aria-label={t('common.missionProgress')}>
             {mission.steps.map((s, i) => (
               <span key={s.id} className={`play__seg${i < index || (i === index && answered) ? ' is-done' : ''}${i === index ? ' is-current' : ''}`}>
                 <i />
@@ -121,8 +129,8 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
             <Mascot size={78} mood={moodFor(mission, index, answers)} className="ask__mascot" />
             <div className="ask__bubble">
               <span className="ask__eyebrow">
-                Challenge {index + 1}
-                {!required && <em>Optional</em>}
+                {t('play.challenge', { number: index + 1 })}
+                {!required && <em>{t('play.optional')}</em>}
               </span>
               <h1 className="ask__question">{step.question}</h1>
               {step.helper && <p className="ask__helper">{step.helper}</p>}
@@ -133,7 +141,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
 
         <footer className="play__foot">
           {index > 0 && (
-            <button className="btn btn--ghost btn--square" onClick={goBack} aria-label="Previous challenge">
+            <button className="btn btn--ghost btn--square" onClick={goBack} aria-label={t('play.previous')}>
               <Icon name="back" size={24} />
             </button>
           )}
@@ -144,16 +152,16 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
         </footer>
       </div>
 
-      <Sheet open={pauseOpen} onClose={() => setPauseOpen(false)} label="Pause mission" size="sm" hideClose>
+      <Sheet open={pauseOpen} onClose={() => setPauseOpen(false)} label={t('play.pause')} size="sm" hideClose>
         <div className="confirm">
           <Mascot size={84} mood="idle" />
-          <h2>Take a break?</h2>
-          <p>Your answers are saved. You can pick this mission up right where you left off.</p>
+          <h2>{t('play.breakTitle')}</h2>
+          <p>{t('play.breakDescription')}</p>
           <button className="btn btn--green btn--block" onClick={() => setPauseOpen(false)}>
-            Keep playing
+            {t('play.keepPlaying')}
           </button>
           <button className="btn btn--ghost btn--block" onClick={() => navigate('/')}>
-            Save &amp; exit
+            {t('play.saveExit')}
           </button>
           <button
             className="linkbtn linkbtn--danger"
@@ -162,7 +170,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
               navigate('/');
             }}
           >
-            Quit and discard answers
+            {t('play.discard')}
           </button>
         </div>
       </Sheet>

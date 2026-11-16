@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { AnswerValue, ChoiceStep, MissionStep as Step, NoteStep, RatingStep } from '../../game/types';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Icon, StarIcon } from '../ui/Icon';
 import { buzz } from '../ui/motion';
 
@@ -47,6 +48,7 @@ function ChoiceStepView({ step, value, onChange }: StepProps<ChoiceStep>) {
 const FACES = ['😣', '😕', '🙂', '😄', '🤩'];
 
 function RatingStepView({ step, value, onChange }: StepProps<RatingStep>) {
+  const { t } = useLanguage();
   const rating = typeof value === 'number' ? value : 0;
   return (
     <div className="rating">
@@ -59,7 +61,7 @@ function RatingStepView({ step, value, onChange }: StepProps<RatingStep>) {
             key={n}
             role="radio"
             aria-checked={rating === n}
-            aria-label={`${n} star${n > 1 ? 's' : ''} — ${step.scale[n - 1]}`}
+            aria-label={t(n > 1 ? 'play.ratingMany' : 'play.ratingOne', { number: n, label: step.scale[n - 1] })}
             className={`rating__star${n <= rating ? ' is-on' : ''}`}
             style={{ '--i': n - 1 } as CSSProperties}
             onClick={() => {
@@ -75,7 +77,7 @@ function RatingStepView({ step, value, onChange }: StepProps<RatingStep>) {
         ))}
       </div>
       <div className={`rating__label${rating ? ' is-set' : ''}`} key={`label-${rating}`}>
-        {rating ? step.scale[rating - 1] : 'Tap a star to rate'}
+        {rating ? step.scale[rating - 1] : t('play.tapStar')}
       </div>
     </div>
   );

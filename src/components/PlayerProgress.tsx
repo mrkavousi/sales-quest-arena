@@ -1,4 +1,6 @@
 import { ACHIEVEMENTS } from '../game/achievements';
+import { localizeAchievement } from '../i18n/content';
+import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 import { AchievementBadge } from './AchievementBadge';
@@ -19,36 +21,37 @@ function StatTile({ value, label, tone, children }: { value: number; label: stri
 /** Player progress summary: totals, streak and achievement badges. */
 export function PlayerProgress() {
   const { progress, stats } = useGame();
+  const { t, language } = useLanguage();
   const sorted = [...ACHIEVEMENTS].sort((a, b) => Number(!!progress.achievements[b.id]) - Number(!!progress.achievements[a.id]));
 
   return (
-    <section className="panel progress" aria-label="Your progress">
+    <section className="panel progress" aria-label={t('progress.title')}>
       <header className="panel__head">
-        <h2>Your progress</h2>
+        <h2>{t('progress.title')}</h2>
       </header>
       <div className="stats">
-        <StatTile value={stats.missionsCompleted} label="Missions" tone="green">
+        <StatTile value={stats.missionsCompleted} label={t('nav.missions')} tone="green">
           <Icon name="check" size={20} strokeWidth={3.4} />
         </StatTile>
-        <StatTile value={stats.totalXp} label="Total XP" tone="blue">
+        <StatTile value={stats.totalXp} label={t('common.totalXp')} tone="blue">
           <XpIcon size={24} />
         </StatTile>
-        <StatTile value={stats.streak} label="Day streak" tone="orange">
+        <StatTile value={stats.streak} label={t('common.dayStreak')} tone="orange">
           <FlameIcon size={24} dim={stats.streak === 0} />
         </StatTile>
       </div>
 
       <header className="panel__head panel__head--sub">
         <h3>
-          Badges <span className="panel__count">{stats.achievements}/{ACHIEVEMENTS.length}</span>
+          {t('progress.badges')} <span className="panel__count">{stats.achievements}/{ACHIEVEMENTS.length}</span>
         </h3>
         <button className="linkbtn" onClick={() => navigate('/profile')}>
-          See all
+          {t('progress.seeAll')}
         </button>
       </header>
       <div className="badge-row">
         {sorted.slice(0, 5).map((a) => (
-          <AchievementBadge key={a.id} achievement={a} unlocked={!!progress.achievements[a.id]} size="sm" />
+          <AchievementBadge key={a.id} achievement={localizeAchievement(a, language)} unlocked={!!progress.achievements[a.id]} size="sm" />
         ))}
       </div>
     </section>

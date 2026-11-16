@@ -1,16 +1,21 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { LanguageProvider } from './i18n/LanguageContext';
+import '@fontsource-variable/vazirmatn/index.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/ui.css';
 import './styles/arena.css';
 import './styles/pages.css';
 import './styles/play.css';
+import './styles/i18n.css';
 import './styles/kiloos.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
   </StrictMode>,
 );

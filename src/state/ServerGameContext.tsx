@@ -5,6 +5,7 @@ import { getLevelInfo } from '../game/levels';
 import { getMission, registerMissions, sanitizeAnswers } from '../game/missions';
 import { getPlayerStats } from '../game/progress';
 import type { Answers, AvatarId, HistoryEntry, Mission, MissionView, PlayerProgress } from '../game/types';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useSession } from './SessionContext';
 import { GameContext, type GameContextValue, type ToastMessage } from './GameContext';
 
@@ -43,6 +44,7 @@ const DRAFT_DEBOUNCE_MS = 450;
  */
 export function ServerGameProvider({ children }: { children: ReactNode }) {
   const { logout } = useSession();
+  const { t } = useLanguage();
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -78,7 +80,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       setCsrfToken(boot.csrf_token);
       apply(boot);
     } catch (err) {
-      setBootError(err instanceof Error ? err.message : 'Could not load your game.');
+      setBootError(err instanceof Error ? err.message : t('k.sg.loadFail'));
     }
   }, [apply]);
 
@@ -101,7 +103,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
     (err: unknown, fallback: string) => {
       if (err instanceof ApiError) {
         if (err.status === 401) return; // SessionContext shows the "session expired" screen.
-        toast(err.isNetwork ? 'Cannot reach the server — check the connection and try again.' : err.message, 'warn');
+        toast(err.isNetwork ? t('k.sg.network') : err.message, 'warn');
         return;
       }
       toast(fallback, 'warn');
@@ -114,9 +116,9 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       void api
         .patch<{ progress: PlayerProgress }>('/api/v1/game/profile', { name: name.trim().slice(0, 24) || 'Rookie', avatar })
         .then((r) => patchProgress(() => r.progress))
-        .catch((err) => fail(err, 'Could not save your profile.'));
+        .catch((err) => fail(err, t('k.sg.saveProfile')));
     },
-    [fail, patchProgress],
+    [fail, patchProgress, t],
   );
 
   const updatePlayer = useCallback(
@@ -128,9 +130,9 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       void api
         .patch<{ progress: PlayerProgress }>('/api/v1/game/profile', body)
         .then((r) => patchProgress(() => r.progress))
-        .catch((err) => fail(err, 'Could not save your profile.'));
+        .catch((err) => fail(err, t('k.sg.saveProfile')));
     },
-    [fail, patchProgress],
+    [fail, patchProgress, t],
   );
 
   const sendDraft = useCallback(
@@ -139,7 +141,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       if (!draft) return Promise.resolve();
       const request = api
         .put(`/api/v1/game/missions/${missionId}/draft`, { step_index: draft.stepIndex, answers: draft.answers })
-        .catch((err) => fail(err, 'Could not save your progress.'))
+        .catch((err) => fail(err, t('k.sg.saveProgress')))
         .finally(() => {
           if (draftInflight.current.get(missionId) === request) draftInflight.current.delete(missionId);
         });
@@ -202,7 +204,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
         delete drafts[missionId];
         return { ...p, drafts };
       });
-      void api.del(`/api/v1/game/missions/${missionId}/draft`).catch((err) => fail(err, 'Could not discard the draft.'));
+      void api.del(`/api/v1/game/missions/${missionId}/draft`).catch((err) => fail(err, t('k.sg.discardFail')));
     },
     [fail, patchProgress],
   );
@@ -235,19 +237,19 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
           toast(err.message, 'warn');
           void load();
         } else if (err instanceof ApiError && err.isNetwork) {
-          toast('No connection — your answers are kept. Tap “Complete mission” to retry; you will not be paid twice.', 'warn');
+          toast(t('k.sg.offline'), 'warn');
         } else {
-          fail(err, 'The server could not confirm this mission. Please try again.');
+          fail(err, t('k.sg.confirmFail'));
         }
         return null;
       }
     },
-    [apply, fail, load, toast],
+    [apply, fail, load, toast, t],
   );
 
   const resetProgress = useCallback(() => {
-    toast('Server-confirmed progress cannot be reset from the app.', 'info');
-  }, [toast]);
+    toast(t('k.sg.noReset'), 'info');
+  }, [toast, t]);
 
   const progress = snap?.progress;
   const todayKey = snap?.dateKey ?? '';
@@ -278,21 +280,21 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       <div className="boot" role="status" aria-live="polite">
         {bootError ? (
           <>
-            <h1>We couldn’t load your game</h1>
+            <h1>{t('k.sg.bootTitle')}</h1>
             <p>{bootError}</p>
             <div className="boot__actions">
               <button className="btn btn--green" onClick={() => void load()}>
-                Try again
+                {t('k.retry')}
               </button>
               <button className="btn btn--ghost" onClick={() => void logout()}>
-                Sign out
+                {t('k.signOut')}
               </button>
             </div>
           </>
         ) : (
           <>
             <span className="boot__spinner" aria-hidden="true" />
-            <p>Loading your arena…</p>
+            <p>{t('k.sg.loading')}</p>
           </>
         )}
       </div>

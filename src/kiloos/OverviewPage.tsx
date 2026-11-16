@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import type { Overview } from '../api/types';
+import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { AttainmentBar, Card, DemoBanner, formatDate, formatMoney, OriginChips, Remoted, StatusChip, Tile, brandColor, useApi } from './ui';
 
 /** Management dashboard: totals, brand split, branches, supervisors and representatives. */
 export function OverviewPage() {
+  const { t } = useLanguage();
   const [period, setPeriod] = useState<string>('');
   const [brand, setBrand] = useState<string>('');
   const [branch, setBranch] = useState<string>('');
@@ -15,35 +17,35 @@ export function OverviewPage() {
   const remote = useApi<Overview>(`/api/v1/mgmt/overview${query.toString() ? `?${query.toString()}` : ''}`);
 
   return (
-    <Remoted remote={remote} what="dashboard">
+    <Remoted remote={remote}>
       {(data) => (
         <div className="k-stack">
           <DemoBanner notice={data.notice} />
           <div className="k-toolbar">
             <h1>
-              Sales performance <small>{data.viewer.title}{data.viewer.branch_name ? ` · ${data.viewer.branch_name}` : ''}</small>
+              {t('k.ov.title')} <small>{data.viewer.title}{data.viewer.branch_name ? ` · ${data.viewer.branch_name}` : ''}</small>
             </h1>
             <div className="k-filters">
               <label>
-                Period
-                <select value={period || data.period || ''} onChange={(e) => setPeriod(e.target.value)} disabled={data.periods.length === 0} aria-label="Period">
+                {t('k.ov.period')}
+                <select value={period || data.period || ''} onChange={(e) => setPeriod(e.target.value)} disabled={data.periods.length === 0} aria-label={t('k.ov.periodAria')}>
                   {data.periods.map((p) => (
                     <option key={p}>{p}</option>
                   ))}
                 </select>
               </label>
               <label>
-                Brand
-                <select value={brand} onChange={(e) => setBrand(e.target.value)} aria-label="Brand">
-                  <option value="">All brands</option>
+                {t('k.ov.brand')}
+                <select value={brand} onChange={(e) => setBrand(e.target.value)} aria-label={t('k.ov.brandAria')}>
+                  <option value="">{t('k.ov.allBrands')}</option>
                   <option>EFES</option>
                   <option>MATADOR</option>
                 </select>
               </label>
               <label>
-                Branch
-                <select value={branch} onChange={(e) => setBranch(e.target.value)} aria-label="Branch">
-                  <option value="">All visible branches</option>
+                {t('k.ov.branch')}
+                <select value={branch} onChange={(e) => setBranch(e.target.value)} aria-label={t('k.ov.branchAria')}>
+                  <option value="">{t('k.ov.allBranches')}</option>
                   {data.branches.map((b) => (
                     <option key={b.code} value={b.code}>
                       {b.name}
@@ -57,43 +59,43 @@ export function OverviewPage() {
           {data.empty || !data.totals ? (
             <Card>
               <div className="k-empty">
-                <h2>No processed sales yet</h2>
-                <p>Upload and process the Excel workbook to fill the dashboards.</p>
+                <h2>{t('k.ov.noSalesTitle')}</h2>
+                <p>{t('k.ov.noSalesText')}</p>
                 {data.viewer.position === 'admin' ? (
                   <button className="btn btn--green" onClick={() => navigate('/imports')}>
-                    Go to Excel import
+                    {t('k.ov.goImport')}
                   </button>
                 ) : (
-                  <p className="k-muted">Ask an administrator to import the sales workbook.</p>
+                  <p className="k-muted">{t('k.ov.askAdmin')}</p>
                 )}
               </div>
             </Card>
           ) : (
             <>
               <div className="k-tiles">
-                <Tile label={`Sales · ${data.period}`} value={formatMoney(data.totals.amount)} sub="Rials, processed sales" />
-                <Tile label="Target" value={formatMoney(data.totals.target)} sub={<AttainmentBar pct={data.totals.attainment_pct} label="Total attainment" />} />
-                <Tile label="Representatives" value={data.totals.reps} sub={`${data.gamification?.players ?? 0} playing the game`} />
-                <Tile label="Org points / game XP" value={`${data.totals.org_points} / ${data.totals.game_xp}`} sub={`${data.gamification?.missions_completed ?? 0} missions completed`} />
+                <Tile label={t('k.ov.salesTile', { period: data.period ?? '' })} value={formatMoney(data.totals.amount)} sub={t('k.ov.rialsProcessed')} />
+                <Tile label={t('k.ov.target')} value={formatMoney(data.totals.target)} sub={<AttainmentBar pct={data.totals.attainment_pct} label={t('k.att.total')} />} />
+                <Tile label={t('k.ov.reps')} value={data.totals.reps} sub={t('k.ov.playing', { count: data.gamification?.players ?? 0 })} />
+                <Tile label={t('k.ov.orgGame')} value={`${data.totals.org_points} / ${data.totals.game_xp}`} sub={t('k.ov.missionsDone', { count: data.gamification?.missions_completed ?? 0 })} />
               </div>
               <div className="k-meta">
                 <OriginChips origin={data.data_origin} />
                 {data.last_import && (
                   <span className="k-muted">
-                    Last import: {data.last_import.file_name} <StatusChip status={data.last_import.status} /> · {formatDate(data.last_import.created_at)}
+                    {t('k.ov.lastImport', { file: data.last_import.file_name })} <StatusChip status={data.last_import.status} /> · {formatDate(data.last_import.created_at)}
                   </span>
                 )}
               </div>
 
               <div className="k-grid2">
-                <Card title="Brand comparison">
+                <Card title={t('k.ov.brandComparison')}>
                   <table className="k-table">
                     <thead>
                       <tr>
-                        <th>Brand</th>
-                        <th className="k-num">Sales</th>
-                        <th className="k-num">Target</th>
-                        <th>Attainment</th>
+                        <th>{t('k.th.brand')}</th>
+                        <th className="k-num">{t('k.th.sales')}</th>
+                        <th className="k-num">{t('k.th.target')}</th>
+                        <th>{t('k.th.attainment')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -106,7 +108,7 @@ export function OverviewPage() {
                           <td className="k-num">{formatMoney(b.amount)}</td>
                           <td className="k-num">{formatMoney(b.target)}</td>
                           <td>
-                            <AttainmentBar pct={b.attainment_pct} label={`${b.brand} attainment`} />
+                            <AttainmentBar pct={b.attainment_pct} label={t('k.att.brandOf', { brand: b.brand })} />
                           </td>
                         </tr>
                       ))}
@@ -114,14 +116,14 @@ export function OverviewPage() {
                   </table>
                 </Card>
 
-                <Card title="Branches">
+                <Card title={t('k.ov.branches')}>
                   <table className="k-table">
                     <thead>
                       <tr>
-                        <th>Branch</th>
-                        <th className="k-num">Sales</th>
-                        <th>Attainment</th>
-                        <th className="k-num">Org pts</th>
+                        <th>{t('k.th.branch')}</th>
+                        <th className="k-num">{t('k.th.sales')}</th>
+                        <th>{t('k.th.attainment')}</th>
+                        <th className="k-num">{t('k.th.orgPts')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -135,7 +137,7 @@ export function OverviewPage() {
                           </td>
                           <td className="k-num">{formatMoney(b.amount)}</td>
                           <td>
-                            <AttainmentBar pct={b.attainment_pct} label={`${b.name} attainment`} />
+                            <AttainmentBar pct={b.attainment_pct} label={t('k.att.of', { name: b.name })} />
                           </td>
                           <td className="k-num">{b.org_points}</td>
                         </tr>
@@ -146,14 +148,14 @@ export function OverviewPage() {
               </div>
 
               <div className="k-grid2">
-                <Card title="Supervisors">
+                <Card title={t('k.ov.supervisors')}>
                   <table className="k-table">
                     <thead>
                       <tr>
-                        <th>Supervisor</th>
-                        <th className="k-num">Reps</th>
-                        <th className="k-num">Sales</th>
-                        <th>Attainment</th>
+                        <th>{t('k.th.supervisor')}</th>
+                        <th className="k-num">{t('k.th.reps')}</th>
+                        <th className="k-num">{t('k.th.sales')}</th>
+                        <th>{t('k.th.attainment')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -165,7 +167,7 @@ export function OverviewPage() {
                           <td className="k-num">{s.reps}</td>
                           <td className="k-num">{formatMoney(s.amount)}</td>
                           <td>
-                            <AttainmentBar pct={s.attainment_pct} label={`${s.name} attainment`} />
+                            <AttainmentBar pct={s.attainment_pct} label={t('k.att.of', { name: s.name })} />
                           </td>
                         </tr>
                       ))}
@@ -173,14 +175,14 @@ export function OverviewPage() {
                   </table>
                 </Card>
 
-                <Card title="Representatives">
+                <Card title={t('k.ov.representatives')}>
                   <table className="k-table">
                     <thead>
                       <tr>
-                        <th>Representative</th>
-                        <th>Attainment</th>
-                        <th className="k-num">Org pts</th>
-                        <th className="k-num">XP</th>
+                        <th>{t('k.th.rep')}</th>
+                        <th>{t('k.th.attainment')}</th>
+                        <th className="k-num">{t('k.th.orgPts')}</th>
+                        <th className="k-num">{t('k.th.xp')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -193,7 +195,7 @@ export function OverviewPage() {
                             <small className="k-muted"> {r.employee_code}</small>
                           </td>
                           <td>
-                            <AttainmentBar pct={r.attainment_pct} label={`${r.name} attainment`} />
+                            <AttainmentBar pct={r.attainment_pct} label={t('k.att.of', { name: r.name })} />
                           </td>
                           <td className="k-num">{r.org_points}</td>
                           <td className="k-num">{r.game.xp}</td>

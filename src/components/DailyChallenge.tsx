@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { GAME_CONFIG } from '../game/config';
 import { formatCountdown, msUntilMidnight } from '../game/dates';
 import { CATEGORIES } from '../game/missions';
+import { localizeMissionView } from '../i18n/content';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useGame } from '../state/GameContext';
 import { CATEGORY_ICON } from './art/MissionArt';
 import { Icon, XpIcon } from './ui/Icon';
@@ -16,15 +18,17 @@ function useCountdown(): string {
 }
 
 export function DailyChallenge({ onOpen }: { onOpen: (missionId: string) => void }) {
-  const { missions } = useGame();
+  const { missions: rawMissions, progress } = useGame();
+  const { t, language } = useLanguage();
   const countdown = useCountdown();
-  const mission = missions.find((m) => m.isDaily);
+  const rawDaily = rawMissions.find((m) => m.isDaily);
+  const mission = rawDaily ? localizeMissionView(rawDaily, progress, language, rawMissions) : undefined;
   if (!mission) return null;
   const done = mission.dailyDone;
   const meta = CATEGORIES[mission.category];
 
   return (
-    <section className={`daily${done ? ' is-done' : ''}`} aria-label="Daily challenge">
+    <section className={`daily${done ? ' is-done' : ''}`} aria-label={t('daily.title')}>
       <div className="daily__sun" aria-hidden="true">
         <span className="daily__rays" />
         <span className="daily__core" style={{ color: done ? 'var(--green-dark)' : meta.dark }}>
@@ -32,22 +36,22 @@ export function DailyChallenge({ onOpen }: { onOpen: (missionId: string) => void
         </span>
       </div>
       <div className="daily__body">
-        <span className="daily__eyebrow">{done ? 'Daily challenge complete' : 'Daily challenge'}</span>
+        <span className="daily__eyebrow">{done ? t('daily.completed') : t('daily.title')}</span>
         <h2 className="daily__title">{mission.title}</h2>
         <div className="daily__meta">
           <span className="daily__bonus">
             <XpIcon size={18} />
-            {done ? `+${GAME_CONFIG.rewards.dailyBonusXp} bonus collected` : `+${GAME_CONFIG.rewards.dailyBonusXp} bonus XP`}
+            {done ? t('daily.bonusCollected', { xp: GAME_CONFIG.rewards.dailyBonusXp }) : t('daily.bonusXp', { xp: GAME_CONFIG.rewards.dailyBonusXp })}
           </span>
           <span className="daily__timer">
             <Icon name="clock" size={15} />
-            {done ? `Next in ${countdown}` : `${countdown} left`}
+            {done ? t('daily.nextIn', { time: countdown }) : t('daily.timeLeft', { time: countdown })}
           </span>
         </div>
       </div>
       {!done && (
         <button className="btn btn--white btn--sm daily__cta" onClick={() => onOpen(mission.id)}>
-          Play
+          {t('common.play')}
         </button>
       )}
     </section>

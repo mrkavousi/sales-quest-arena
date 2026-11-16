@@ -1,23 +1,25 @@
 import { useState } from 'react';
 import { api, ApiError } from '../api/client';
 import type { ImportRow, ImportSummary } from '../api/types';
+import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { Card, DemoBanner, formatDate, formatMoney, Remoted, StatusChip, Tile, brandColor, useApi } from './ui';
 
 function RowTable({ rows, empty }: { rows: ImportRow[]; empty: string }) {
+  const { t } = useLanguage();
   if (rows.length === 0) return <p className="k-muted">{empty}</p>;
   return (
     <div className="k-scroll">
       <table className="k-table k-table--dense">
         <thead>
           <tr>
-            <th>Row</th>
-            <th>ID</th>
-            <th>Rep</th>
-            <th>Date</th>
-            <th>Brand</th>
-            <th className="k-num">Amount</th>
-            <th>Result</th>
+            <th>{t('k.th.row')}</th>
+            <th>{t('k.th.id')}</th>
+            <th>{t('k.th.rep')}</th>
+            <th>{t('k.th.date')}</th>
+            <th>{t('k.th.brand')}</th>
+            <th className="k-num">{t('k.th.amount')}</th>
+            <th>{t('k.th.result')}</th>
           </tr>
         </thead>
         <tbody>
@@ -42,6 +44,7 @@ function RowTable({ rows, empty }: { rows: ImportRow[]; empty: string }) {
 
 /** Validation preview + explicit confirmation. Processing is what makes sales count. */
 export function ImportPage({ importId }: { importId: string }) {
+  const { t } = useLanguage();
   const remote = useApi<ImportSummary>(`/api/v1/mgmt/imports/${encodeURIComponent(importId)}`);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,14 +59,14 @@ export function ImportPage({ importId }: { importId: string }) {
       setResult(done.result);
       setOverride(done.import);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Processing failed.');
+      setError(err instanceof ApiError ? err.message : t('k.processFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Remoted remote={remote} what="import">
+    <Remoted remote={remote}>
       {(loaded) => {
         const data = override ?? loaded;
         const done = data.status === 'completed';
@@ -73,34 +76,34 @@ export function ImportPage({ importId }: { importId: string }) {
             <div className="k-toolbar">
               <div>
                 <button className="k-link" onClick={() => navigate('/imports')}>
-                  ← All imports
+                  {t('k.im.detailBack')}
                 </button>
                 <h1>
                   {data.file_name} <StatusChip status={data.status} />
-                  {data.is_sample && <span className="k-chip k-chip--sample">SAMPLE data</span>}
+                  {data.is_sample && <span className="k-chip k-chip--sample">{t('k.sampleData')}</span>}
                 </h1>
-                <p className="k-muted">Uploaded {formatDate(data.created_at)}</p>
+                <p className="k-muted">{t('k.im.uploadedAt', { date: formatDate(data.created_at) })}</p>
               </div>
             </div>
 
             <div className="k-tiles" data-testid="import-counts">
-              <Tile label="Rows in file" value={data.counts.total} />
-              <Tile label="Valid rows" value={data.counts.valid} sub={done ? `${data.counts.processed} processed` : `${data.counts.pending} waiting for confirmation`} tone="good" />
-              <Tile label="Rejected rows" value={data.counts.rejected} sub="data problems, excluded" tone={data.counts.rejected ? 'bad' : undefined} />
-              <Tile label="Duplicate rows" value={data.counts.duplicates} sub="already counted, excluded" tone={data.counts.duplicates ? 'warn' : undefined} />
+              <Tile label={t('k.im.rowsInFile')} value={data.counts.total} />
+              <Tile label={t('k.im.validRows')} value={data.counts.valid} sub={done ? t('k.im.processedSub', { count: data.counts.processed }) : t('k.im.waitingSub', { count: data.counts.pending })} tone="good" />
+              <Tile label={t('k.im.rejectedRows')} value={data.counts.rejected} sub={t('k.im.rejectedSub')} tone={data.counts.rejected ? 'bad' : undefined} />
+              <Tile label={t('k.im.duplicateRows')} value={data.counts.duplicates} sub={t('k.im.duplicateSub')} tone={data.counts.duplicates ? 'warn' : undefined} />
             </div>
 
             <div className="k-grid2">
-              <Card title="Sales in valid rows">
+              <Card title={t('k.im.salesValid')}>
                 <p className="k-bigmoney">
-                  {formatMoney(data.totals.amount)} <small>Rials · {data.totals.records} rows</small>
+                  {formatMoney(data.totals.amount)} <small>{t('k.im.rialsRows', { count: data.totals.records })}</small>
                 </p>
                 <table className="k-table">
                   <thead>
                     <tr>
-                      <th>Brand</th>
-                      <th className="k-num">Rows</th>
-                      <th className="k-num">Amount</th>
+                      <th>{t('k.th.brand')}</th>
+                      <th className="k-num">{t('k.th.rows')}</th>
+                      <th className="k-num">{t('k.th.amount')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -118,40 +121,45 @@ export function ImportPage({ importId }: { importId: string }) {
                 </table>
                 {data.targets.rows > 0 && (
                   <p className="k-note">
-                    Targets sheet: {data.targets.valid} valid · {data.targets.invalid} rejected
-                    {data.target_issues.map((t) => (
-                      <span key={t.row_number} className="k-issue">
+                    {t('k.im.targetsSheet', { valid: data.targets.valid, invalid: data.targets.invalid })}
+                    {data.target_issues.map((issue) => (
+                      <span key={issue.row_number} className="k-issue">
                         {' '}
-                        row {t.row_number} ({t.user_external_id}/{t.brand_code}): {t.error_message}
+                        {t('k.im.targetIssue', { row: issue.row_number, user: issue.user_external_id, brand: issue.brand_code, error: issue.error_message })}
                       </span>
                     ))}
                   </p>
                 )}
               </Card>
 
-              <Card title="Confirm and process">
+              <Card title={t('k.im.confirmTitle')}>
                 {done ? (
                   <div data-testid="import-done">
                     <p>
-                      <b>Processed.</b> {data.counts.processed} sales rows now count in the dashboards
-                      {result ? `; ${result.created} organizational point events were added to the ledger` : ''}.
+                      <b>{t('k.im.processedDone')}</b> {t('k.im.processedRows', { count: data.counts.processed })}
+                      {result ? t('k.im.ledgerAdded', { count: result.created }) : ''}.
                     </p>
                     <p className={data.reconciliation.rows_ok && data.reconciliation.points_ok ? 'k-ok' : 'k-bad'}>
-                      Reconciliation: rows {data.reconciliation.rows_ok ? 'OK' : 'MISMATCH'} · points {data.reconciliation.points_ok ? 'OK' : 'MISMATCH'} ({data.reconciliation.scored_points} ledger / {data.reconciliation.points_sum} import)
+                      {t('k.im.reconcile', {
+                        rows: data.reconciliation.rows_ok ? t('k.im.ok') : t('k.im.mismatch'),
+                        points: data.reconciliation.points_ok ? t('k.im.ok') : t('k.im.mismatch'),
+                        ledger: data.reconciliation.scored_points,
+                        imported: data.reconciliation.points_sum,
+                      })}
                     </p>
                     <button className="btn btn--green" onClick={() => navigate('/')}>
-                      Open the management dashboard
+                      {t('k.im.openDashboard')}
                     </button>
                   </div>
                 ) : (
                   <>
                     <p>
-                      Review the preview. Confirming counts <b>{data.counts.pending}</b> valid rows, applies <b>{data.targets.valid}</b> targets and writes sample organizational points to the ledger. Rejected and duplicate rows are never counted. Confirming twice cannot double count.
+                      {t('k.im.reviewNote', { count: data.counts.pending, targets: data.targets.valid })}
                     </p>
                     <button className="btn btn--yellow btn--lg" disabled={!data.can_process || busy} onClick={() => void process()} data-testid="process-import">
-                      {busy ? 'Processing…' : `Confirm & process ${data.counts.pending} rows`}
+                      {busy ? t('k.im.processing') : t('k.im.confirmProcess', { count: data.counts.pending })}
                     </button>
-                    {!data.can_process && <p className="k-muted">Nothing left to process.</p>}
+                    {!data.can_process && <p className="k-muted">{t('k.im.nothingLeft')}</p>}
                   </>
                 )}
                 {error && (
@@ -162,11 +170,11 @@ export function ImportPage({ importId }: { importId: string }) {
               </Card>
             </div>
 
-            <Card title={`Rejected & duplicate rows (${data.problem_rows.length}${data.problem_rows.length >= 60 ? '+' : ''})`}>
-              <RowTable rows={data.problem_rows} empty="No rejected or duplicate rows." />
+            <Card title={t('k.im.problemRows', { count: data.problem_rows.length, plus: data.problem_rows.length >= 60 ? '+' : '' })}>
+              <RowTable rows={data.problem_rows} empty={t('k.empty.noRejected')} />
             </Card>
-            <Card title="Preview of valid rows (first 15)">
-              <RowTable rows={data.sample_rows} empty="No valid rows." />
+            <Card title={t('k.im.previewRows')}>
+              <RowTable rows={data.sample_rows} empty={t('k.empty.noValid')} />
             </Card>
           </div>
         );

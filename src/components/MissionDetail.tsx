@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 import { GAME_CONFIG } from '../game/config';
 import { CATEGORIES } from '../game/missions';
+import { categoryLabel, localizeMissionView } from '../i18n/content';
+import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 import { MissionArt } from './art/MissionArt';
@@ -16,9 +18,11 @@ interface MissionDetailProps {
 
 /** Mission introduction: illustration, description, time, reward preview and the Start button. */
 export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
-  const { missions, progress } = useGame();
-  const mission = missions.find((m) => m.id === missionId);
-  if (!mission) return null;
+  const { missions: rawMissions, progress } = useGame();
+  const { t, language } = useLanguage();
+  const raw = rawMissions.find((m) => m.id === missionId);
+  if (!raw) return null;
+  const mission = localizeMissionView(raw, progress, language, rawMissions);
 
   const meta = CATEGORIES[mission.category];
   const locked = mission.status === 'locked';
@@ -28,10 +32,10 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
 
   const cta =
     mission.status === 'in_progress'
-      ? `Continue · step ${Math.min(mission.steps.length, (draft?.stepIndex ?? 0) + 1)} of ${mission.steps.length}`
+      ? t('detail.continueStep', { step: Math.min(mission.steps.length, (draft?.stepIndex ?? 0) + 1), total: mission.steps.length })
       : mission.status === 'completed'
-        ? 'Play again'
-        : 'Start mission';
+        ? t('common.playAgain')
+        : t('detail.start');
 
   const start = () => {
     buzz(15);
@@ -53,51 +57,56 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
 
         <div className="detail__body">
           <div className="detail__tags">
-            <span className="detail__cat">{meta.label}</span>
+            <span className="detail__cat">{categoryLabel(mission.category, language)}</span>
             <StatusPill status={mission.status} />
-            {dailyBonus && <span className="pill pill--daily">Daily challenge</span>}
+            {dailyBonus && <span className="pill pill--daily">{t('daily.title')}</span>}
           </div>
           <h2 className="detail__title">{mission.title}</h2>
           <p className="detail__desc">{mission.description}</p>
 
           <div className="detail__facts">
-            <span><Icon name="clock" size={16} />About {mission.estimatedMinutes} min</span>
-            <span><Icon name="steps" size={16} />{mission.steps.length} quick challenges</span>
+            <span><Icon name="clock" size={16} />{t('missions.aboutMinutes', { minutes: mission.estimatedMinutes })}</span>
+            <span><Icon name="steps" size={16} />{t('missions.quickChallenges', { count: mission.steps.length })}</span>
             <DifficultyDots difficulty={mission.difficulty} />
           </div>
 
-          <div className="detail__rewards" aria-label="Reward preview">
+          <div className="detail__rewards" aria-label={t('detail.rewardPreview')}>
             <div className="rewardchip rewardchip--xp">
               <XpIcon size={30} />
-              <div><b>+{mission.xpReward + (dailyBonus ? GAME_CONFIG.rewards.dailyBonusXp : 0)}</b><span>XP</span></div>
+              <div><b>+{mission.xpReward + (dailyBonus ? GAME_CONFIG.rewards.dailyBonusXp : 0)}</b><span>{t('common.xp')}</span></div>
             </div>
             <div className="rewardchip rewardchip--coin">
               <CoinIcon size={30} />
-              <div><b>+{mission.coinReward}</b><span>Coins</span></div>
+              <div><b>+{mission.coinReward}</b><span>{t('common.coins')}</span></div>
             </div>
           </div>
           {dailyBonus && (
             <p className="detail__hint">
-              <span aria-hidden="true">☀️</span> Includes today&apos;s <b>+{GAME_CONFIG.rewards.dailyBonusXp} XP daily bonus</b>
+              <span aria-hidden="true">☀️</span> {t('detail.dailyHint', { xp: GAME_CONFIG.rewards.dailyBonusXp })}
             </p>
           )}
           {hasOrderBonus && !locked && (
             <p className="detail__hint">
-              <span aria-hidden="true">🛒</span> Land an order for <b>+{GAME_CONFIG.rewards.orderBonusXp} bonus XP</b>
+              <span aria-hidden="true">🛒</span> {t('detail.orderHint', { xp: GAME_CONFIG.rewards.orderBonusXp })}
             </p>
           )}
 
           {mission.completions > 0 && (
             <p className="detail__record">
-              Completed <b>{mission.completions}×</b>
-              {mission.bestRating !== null && <> · best <Stars value={mission.bestRating} size={14} /></>}
+              {t('detail.completedTimes', { count: mission.completions })}
+              {mission.bestRating !== null && <> · {t('detail.best')} <Stars value={mission.bestRating} size={14} /></>}
             </p>
           )}
 
           {mission.salesGateInfo && (
             <p className="detail__hint" data-testid="sales-gate">
-              <span aria-hidden="true">📈</span> Server check: <b>{mission.salesGateInfo.attainmentPct ?? 0}%</b> of your {mission.salesGateInfo.period ?? ''} target
-              (needs {mission.salesGateInfo.minPct}%) · <em>{mission.salesGateInfo.status} demo rule</em>
+              <span aria-hidden="true">📈</span>{' '}
+              {t('k.g.salesGate', {
+                pct: mission.salesGateInfo.attainmentPct ?? 0,
+                period: mission.salesGateInfo.period ?? '',
+                min: mission.salesGateInfo.minPct,
+                status: mission.salesGateInfo.status,
+              })}
             </p>
           )}
 

@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 import { CATEGORIES } from '../game/missions';
-import type { MissionView } from '../game/types';
+import { useLanguage } from '../i18n/LanguageContext';
+import type { MessageKey } from '../i18n/messages';
+import type { MissionStatus, MissionView } from '../game/types';
 import { Mascot } from './art/Mascot';
 import { CATEGORY_ICON } from './art/MissionArt';
 import { Scenery, TreasureChest, type SceneryKind } from './art/Scenery';
@@ -17,6 +19,13 @@ const DECOR: SceneryKind[] = ['tree', 'tent', 'bush', 'pine', 'rock', 'flowers',
 const nodeX = (i: number) => XS[i % XS.length];
 const nodeY = (i: number) => TOP + i * ROW_H;
 
+const STATUS_KEY: Record<MissionStatus, MessageKey> = {
+  locked: 'status.locked',
+  available: 'status.available',
+  in_progress: 'status.in_progress',
+  completed: 'status.completed',
+};
+
 function segmentPath(i: number): string {
   const x0 = nodeX(i), y0 = nodeY(i), x1 = nodeX(i + 1), y1 = nodeY(i + 1);
   const mid = (y1 - y0) / 2;
@@ -30,13 +39,14 @@ interface MissionMapProps {
 }
 
 export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
+  const { t } = useLanguage();
   const done = missions.filter((m) => m.completions > 0).length;
   const chestY = nodeY(missions.length - 1) + ROW_H - 6;
   const height = chestY + 130;
   const allDone = done === missions.length;
 
   return (
-    <section className="map" aria-label="Mission map">
+    <section className="map" aria-label={t('map.label')}>
       <div className="map__sky" aria-hidden="true">
         <span className="map__cloud map__cloud--a"><Scenery kind="cloud" size={64} /></span>
         <span className="map__cloud map__cloud--b"><Scenery kind="cloud" size={44} /></span>
@@ -45,10 +55,10 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
 
       <header className="map__head">
         <div className="map__ribbon">
-          <span className="map__world">World 1</span>
-          <h2>Quest Island</h2>
+          <span className="map__world">{t('map.world')}</span>
+          <h2>{t('map.island')}</h2>
         </div>
-        <div className="map__count" aria-label={`${done} of ${missions.length} missions completed`}>
+        <div className="map__count" aria-label={t('map.completedCount', { done, total: missions.length })}>
           <Icon name="check" size={14} strokeWidth={3.4} />
           {done}/{missions.length}
         </div>
@@ -95,7 +105,8 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
           const isActive = m.id === activeId;
           const x = nodeX(i);
           const mascotRight = x <= 160;
-          const cta = m.status === 'in_progress' ? 'Continue' : m.status === 'completed' ? 'Play again' : 'Start';
+          const cta = m.status === 'in_progress' ? t('common.continue') : m.status === 'completed' ? t('common.playAgain') : t('common.start');
+          const dailyPending = m.isDaily && !m.dailyDone;
           return (
             <div
               key={m.id}
@@ -113,7 +124,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
               <button
                 className="node__btn"
                 onClick={() => onSelect(m.id)}
-                aria-label={`${m.title} — ${m.status.replace('_', ' ')}${m.isDaily && !m.dailyDone ? ', daily challenge' : ''}`}
+                aria-label={`${t('map.nodeLabel', { mission: m.title, status: t(STATUS_KEY[m.status]) })}${dailyPending ? t('map.dailySuffix') : ''}`}
               >
                 {isActive && <span className="node__pulse" aria-hidden="true" />}
                 {m.status === 'in_progress' && (
@@ -127,13 +138,13 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
                     <Icon name="check" size={15} strokeWidth={4} />
                   </span>
                 )}
-                {m.isDaily && !m.dailyDone && m.status !== 'locked' && <span className="node__daily" aria-hidden="true">Daily</span>}
+                {dailyPending && m.status !== 'locked' && <span className="node__daily" aria-hidden="true">{t('common.daily')}</span>}
               </button>
               <div className="node__label">
                 <span className="node__title">
                   {m.shortTitle}
                   {m.completions > 0 && m.bestRating !== null && (
-                    <span className="node__rating" aria-label={`best rating ${m.bestRating} of 5`}>
+                    <span className="node__rating" aria-label={t('map.bestRating', { rating: m.bestRating })}>
                       <StarIcon size={13} />
                       {m.bestRating}
                     </span>
@@ -146,7 +157,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
 
         <div className={`map__chest${allDone ? ' is-open' : ''}`} style={{ top: chestY }}>
           <TreasureChest size={86} open={allDone} />
-          <span className="map__chest-label">{allDone ? 'Island cleared! World 2 is on the way' : 'Clear the island — more worlds coming soon'}</span>
+          <span className="map__chest-label">{allDone ? t('map.cleared') : t('map.comingSoon')}</span>
         </div>
       </div>
     </section>
