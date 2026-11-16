@@ -1,4 +1,9 @@
-import { useState } from 'react';
+import { n } from '../i18n';
+import { useCallback, useState } from 'react';
+import { DailyChallenge } from '../components/DailyChallenge';
+import { LevelUpOverlay } from '../components/LevelUpOverlay';
+import { QuestPanel } from '../components/QuestPanel';
+import type { QuestClaim } from '../game/types';
 import { MissionCard } from '../components/MissionCard';
 import { MissionDetail } from '../components/MissionDetail';
 import { CATEGORIES } from '../game/missions';
@@ -12,6 +17,10 @@ export function MissionsPage() {
   const { missions } = useGame();
   const [filter, setFilter] = useState<Filter>('all');
   const [selected, setSelected] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<QuestClaim | null>(null);
+  const onClaimed = useCallback((claim: QuestClaim) => {
+    if (claim.level_after > claim.level_before) setLevelUp(claim);
+  }, []);
 
   const categories = [...new Set(missions.map((m) => m.category))];
   const visible = missions
@@ -22,15 +31,21 @@ export function MissionsPage() {
   return (
     <div className="pagebody">
       <header className="pagehead">
-        <h1>Missions</h1>
+        <h1>مأموریت‌ها و چالش‌ها</h1>
         <p>
-          {open} of {missions.length} unlocked · pick one and play
+          {n(open)} از {n(missions.length)} مأموریت باز است · یکی را انتخاب کنید
         </p>
       </header>
 
-      <div className="filters" role="tablist" aria-label="Mission categories">
+      <div className="missions-top">
+        <DailyChallenge onOpen={setSelected} />
+        <QuestPanel onClaimed={onClaimed} />
+      </div>
+
+      <h2 className="missions-heading">همهٔ مأموریت‌ها</h2>
+      <div className="filters" role="tablist" aria-label="دسته‌های مأموریت">
         <button role="tab" aria-selected={filter === 'all'} className={`filter${filter === 'all' ? ' is-active' : ''}`} onClick={() => setFilter('all')}>
-          All
+          همه
         </button>
         {categories.map((c) => (
           <button key={c} role="tab" aria-selected={filter === c} className={`filter${filter === c ? ' is-active' : ''}`} onClick={() => setFilter(c)}>
@@ -47,6 +62,7 @@ export function MissionsPage() {
       </div>
 
       <MissionDetail missionId={selected} onClose={() => setSelected(null)} />
+      {levelUp && <LevelUpOverlay claim={levelUp} onClose={() => setLevelUp(null)} />}
     </div>
   );
 }

@@ -1,24 +1,25 @@
 import type { ReactNode } from 'react';
 import type { RouteName } from '../router';
 import { useGame } from '../state/GameContext';
-import { useOptionalSession } from '../state/SessionContext';
 import { Icon, type IconName } from './ui/Icon';
 
-const TABS: { route: RouteName; href: string; label: string; icon: IconName }[] = [
-  { route: 'arena', href: '#/', label: 'Arena', icon: 'shield' },
-  { route: 'missions', href: '#/missions', label: 'Missions', icon: 'target' },
-  { route: 'history', href: '#/history', label: 'History', icon: 'scroll' },
-  { route: 'profile', href: '#/profile', label: 'Profile', icon: 'user' },
+type Tab = { route: RouteName; href: string; label: string; icon: IconName };
+
+const TABS: Tab[] = [
+  { route: 'arena', href: '#/', label: 'عرصه', icon: 'shield' },
+  { route: 'missions', href: '#/missions', label: 'مأموریت‌ها', icon: 'target' },
+  { route: 'history', href: '#/history', label: 'تاریخچه', icon: 'scroll' },
+  { route: 'profile', href: '#/profile', label: 'پروفایل', icon: 'user' },
 ];
 
-/** Server-mode tabs: the representative also gets the performance dashboard and the leaderboard. */
-const SERVER_TABS: { route: RouteName; href: string; label: string; icon: IconName }[] = [
-  { route: 'arena', href: '#/', label: 'Arena', icon: 'shield' },
-  { route: 'missions', href: '#/missions', label: 'Missions', icon: 'target' },
-  { route: 'me', href: '#/me', label: 'Sales', icon: 'box' },
-  { route: 'board', href: '#/board', label: 'Ranking', icon: 'trophy' },
-  { route: 'history', href: '#/history', label: 'History', icon: 'scroll' },
-  { route: 'profile', href: '#/profile', label: 'Profile', icon: 'user' },
+/** Visitor tabs in server mode: the game home, missions, own performance, ranking, history, profile. */
+const SERVER_TABS: Tab[] = [
+  { route: 'arena', href: '#/', label: 'خانه', icon: 'shield' },
+  { route: 'missions', href: '#/missions', label: 'مأموریت‌ها', icon: 'target' },
+  { route: 'me', href: '#/me', label: 'عملکرد', icon: 'box' },
+  { route: 'board', href: '#/board', label: 'رتبه‌بندی', icon: 'trophy' },
+  { route: 'history', href: '#/history', label: 'تاریخچه', icon: 'scroll' },
+  { route: 'profile', href: '#/profile', label: 'پروفایل', icon: 'user' },
 ];
 
 export function Logo() {
@@ -30,8 +31,8 @@ export function Logo() {
         <path d="M32 8l6.6 13.4 14.8 2.2-10.7 10.4 2.5 14.7L32 41.8l-13.2 6.9 2.5-14.7L10.6 23.6l14.8-2.2z" fill="#5b3df5" />
       </svg>
       <span className="logo__text">
-        <b>Sales Quest</b>
-        <i>Arena</i>
+        <b>کیلوس</b>
+        <i>عرصهٔ ماموریت فروش</i>
       </span>
     </span>
   );
@@ -42,21 +43,20 @@ export function StorageBanner() {
   if (persistence === 'saved') return null;
   return (
     <div className="storage-banner" role="alert">
-      <b>Progress is not being saved.</b>{' '}
+      <b>پیشرفت شما ذخیره نمی‌شود.</b>{' '}
       {persistence === 'unavailable'
-        ? 'This browser (or embedded preview) blocks local storage, so your progress will be lost when the page closes. Open the game in a normal browser tab to keep it.'
-        : 'The last save failed — device storage may be full. Your progress will be lost when the page closes.'}
+        ? 'این مرورگر ذخیره‌سازی محلی را مسدود کرده است و با بستن صفحه پیشرفت از بین می‌رود. بازی را در یک زبانهٔ معمولی مرورگر باز کنید.'
+        : 'آخرین ذخیره ناموفق بود؛ ممکن است حافظهٔ دستگاه پر باشد. با بستن صفحه پیشرفت از بین می‌رود.'}
     </div>
   );
 }
 
 export function AppLayout({ route, children }: { route: RouteName; children: ReactNode }) {
   const { mode } = useGame();
-  const session = useOptionalSession();
   const tabs = mode === 'server' ? SERVER_TABS : TABS;
   return (
     <div className="shell">
-      <nav className="nav" aria-label="Main">
+      <nav className="nav" aria-label="منوی اصلی">
         <div className="nav__brand">
           <Logo />
         </div>
@@ -70,15 +70,6 @@ export function AppLayout({ route, children }: { route: RouteName; children: Rea
             </a>
           ))}
         </div>
-        {mode === 'server' && session?.user && (
-          <div className="nav__session">
-            <span dir="auto">{session.user.name}</span>
-            <small>{session.user.employee_code} · DEMO</small>
-            <button className="linkbtn" onClick={() => void session.logout()}>
-              Sign out
-            </button>
-          </div>
-        )}
       </nav>
       <main className="shell__main">
         <StorageBanner />

@@ -1,4 +1,5 @@
 import type { BranchDetail } from '../api/types';
+import { branchLabel, brandName, jperiod, n } from '../i18n';
 import { navigate } from '../router';
 import { AttainmentBar, Card, DemoBanner, formatMoney, OriginChips, Remoted, Tile, brandColor, useApi } from './ui';
 
@@ -6,37 +7,37 @@ import { AttainmentBar, Card, DemoBanner, formatMoney, OriginChips, Remoted, Til
 export function BranchPage({ code }: { code: string }) {
   const remote = useApi<BranchDetail>(`/api/v1/mgmt/branches/${encodeURIComponent(code)}`);
   return (
-    <Remoted remote={remote} what="branch">
+    <Remoted remote={remote} what="شعبه">
       {(data) => (
         <div className="k-stack">
           <DemoBanner />
           <div className="k-toolbar">
             <div>
-              <button className="k-link" onClick={() => navigate('/')}>
-                ← All branches
+              <button className="k-link" onClick={() => navigate('/org')}>
+                → همه شعبه‌ها
               </button>
               <h1>
-                {data.branch.name} <small>Manager: <span dir="auto">{data.branch.manager ?? '—'}</span></small>
+                {branchLabel(data.branch.code, data.branch.name)} <small>مدیر شعبه: <span dir="auto">{data.branch.manager ?? '—'}</span></small>
               </h1>
             </div>
           </div>
           <div className="k-tiles">
-            <Tile label={`Sales · ${data.period ?? '—'}`} value={formatMoney(data.totals.amount)} sub="Rials, processed sales" />
-            <Tile label="Target" value={formatMoney(data.totals.target)} sub={<AttainmentBar pct={data.totals.attainment_pct} label="Branch attainment" />} />
-            <Tile label="Supervisors" value={data.supervisors.length} sub={`${data.totals.reps} representatives`} />
-            <Tile label="Org points / game XP" value={`${data.totals.org_points} / ${data.totals.game_xp}`} />
+            <Tile label={`فروش · ${jperiod(data.period)}`} value={formatMoney(data.totals.amount)} sub="ریال، فروش پردازش‌شده" />
+            <Tile label="هدف فروش" value={formatMoney(data.totals.target)} sub={<AttainmentBar pct={data.totals.attainment_pct} label="تحقق شعبه" />} />
+            <Tile label="سرپرستان" value={n(data.supervisors.length)} sub={`${n(data.totals.reps)} ویزیتور`} />
+            <Tile label="امتیاز سازمانی / امتیاز تجربه" value={`${n(data.totals.org_points)} / ${n(data.totals.game_xp)}`} />
           </div>
           <div className="k-meta">
             <OriginChips origin={data.data_origin} />
           </div>
-          <Card title="Brand split">
+          <Card title="سهم برندها">
             <table className="k-table">
               <thead>
                 <tr>
-                  <th>Brand</th>
-                  <th className="k-num">Sales</th>
-                  <th className="k-num">Target</th>
-                  <th>Attainment</th>
+                  <th>برند</th>
+                  <th className="k-num">فروش</th>
+                  <th className="k-num">هدف</th>
+                  <th>تحقق</th>
                 </tr>
               </thead>
               <tbody>
@@ -44,7 +45,7 @@ export function BranchPage({ code }: { code: string }) {
                   <tr key={b.brand}>
                     <td>
                       <i className="k-dot" style={{ background: brandColor(b.brand) }} />
-                      {b.name ?? b.brand}
+                      {brandName(b.brand)}
                     </td>
                     <td className="k-num">{formatMoney(b.amount)}</td>
                     <td className="k-num">{formatMoney(b.target)}</td>
@@ -61,20 +62,20 @@ export function BranchPage({ code }: { code: string }) {
               key={sup.id ?? 'none'}
               title={
                 <span dir="auto" data-testid={`supervisor-${sup.name}`}>
-                  Supervisor · {sup.name}
+                  سرپرست · {sup.name}
                 </span>
               }
-              action={<AttainmentBar pct={sup.attainment_pct} label={`${sup.name} attainment`} />}
+              action={<AttainmentBar pct={sup.attainment_pct} label={`تحقق ${sup.name}`} />}
             >
               <table className="k-table">
                 <thead>
                   <tr>
-                    <th>Representative</th>
-                    <th className="k-num">Sales</th>
-                    <th className="k-num">Target</th>
-                    <th>Attainment</th>
-                    <th className="k-num">Org pts</th>
-                    <th className="k-num">Game</th>
+                    <th>ویزیتور</th>
+                    <th className="k-num">فروش</th>
+                    <th className="k-num">هدف</th>
+                    <th>تحقق</th>
+                    <th className="k-num">امتیاز سازمانی</th>
+                    <th className="k-num">بازی</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -89,11 +90,11 @@ export function BranchPage({ code }: { code: string }) {
                       <td className="k-num">{formatMoney(r.amount)}</td>
                       <td className="k-num">{formatMoney(r.target)}</td>
                       <td>
-                        <AttainmentBar pct={r.attainment_pct} label={`${r.name} attainment`} />
+                        <AttainmentBar pct={r.attainment_pct} label={`تحقق ${r.name}`} />
                       </td>
-                      <td className="k-num">{r.org_points}</td>
+                      <td className="k-num">{n(r.org_points)}</td>
                       <td className="k-num">
-                        Lv {r.game.level} · {r.game.xp} XP
+                        سطح {n(r.game.level)} · {n(r.game.xp)} امتیاز
                       </td>
                     </tr>
                   ))}

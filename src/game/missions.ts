@@ -13,18 +13,18 @@ export interface CategoryMeta {
 }
 
 export const CATEGORIES: Record<MissionCategory, CategoryMeta> = {
-  customer_visit: { label: 'Customer Visit', color: '#2ea8ff', dark: '#1581d6', soft: '#e1f3ff' },
-  product_intro: { label: 'Product Introduction', color: '#9366ff', dark: '#6f41e0', soft: '#efe7ff' },
-  follow_up: { label: 'Customer Follow-up', color: '#19c9b2', dark: '#0e9f8c', soft: '#dcf8f3' },
-  new_customer: { label: 'New Customer Acquisition', color: '#ff6b8e', dark: '#dd446b', soft: '#ffe5ec' },
-  market_research: { label: 'Market Research', color: '#ff8f3d', dark: '#de6a17', soft: '#ffeddd' },
-  sales_achievement: { label: 'Sales Achievement', color: '#ffb81f', dark: '#e09200', soft: '#fff3d1' },
+  customer_visit: { label: 'ویزیت مشتری', color: '#2ea8ff', dark: '#1581d6', soft: '#e1f3ff' },
+  product_intro: { label: 'معرفی محصول', color: '#9366ff', dark: '#6f41e0', soft: '#efe7ff' },
+  follow_up: { label: 'پیگیری مشتری', color: '#19c9b2', dark: '#0e9f8c', soft: '#dcf8f3' },
+  new_customer: { label: 'جذب مشتری جدید', color: '#ff6b8e', dark: '#dd446b', soft: '#ffe5ec' },
+  market_research: { label: 'پژوهش بازار', color: '#ff8f3d', dark: '#de6a17', soft: '#ffeddd' },
+  sales_achievement: { label: 'دستاورد فروش', color: '#ffb81f', dark: '#e09200', soft: '#fff3d1' },
 };
 
 export const DIFFICULTY: Record<MissionDifficulty, { label: string; dots: number }> = {
-  easy: { label: 'Easy', dots: 1 },
-  medium: { label: 'Medium', dots: 2 },
-  hard: { label: 'Hard', dots: 3 },
+  easy: { label: 'آسان', dots: 1 },
+  medium: { label: 'متوسط', dots: 2 },
+  hard: { label: 'دشوار', dots: 3 },
 };
 
 /* ------------------------------------------------------------------ */
@@ -353,15 +353,24 @@ export const MISSIONS: Mission[] = [
 /* ------------------------------------------------------------------ */
 
 const BY_ID = new Map<string, Mission>(MISSIONS.map((m) => [m.id, m]));
+const FROM_SERVER = new Set<string>();
 
 /**
  * Server mode: the backend owns the mission catalog (including sales-driven missions that do
  * not exist in this static list). Registering them lets every screen resolve a mission id.
  */
 export function registerMissions(list: Mission[]): void {
-  // Keep the first registration: definitions are static per server version, and a stable object
-  // identity stops screens from re-running effects every time a server response arrives.
-  for (const mission of list) if (!BY_ID.has(mission.id)) BY_ID.set(mission.id, mission);
+  // The server owns mission text (Persian in this build), so its definition replaces the built-in
+  // one the first time it is seen. After that the first registration is kept: definitions are
+  // static per server version, and a stable object identity stops screens from re-running
+  // effects every time a server response arrives. Custom missions can change, so they refresh.
+  for (const mission of list) {
+    const custom = (mission as { isCustom?: boolean }).isCustom === true;
+    if (!FROM_SERVER.has(mission.id) || custom) {
+      BY_ID.set(mission.id, mission);
+      FROM_SERVER.add(mission.id);
+    }
+  }
 }
 
 export function getMission(id: string): Mission | undefined {

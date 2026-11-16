@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { DemoUser } from '../api/types';
 import { Logo } from '../components/AppLayout';
+import { POSITION_FA } from '../i18n';
 import { useSession } from '../state/SessionContext';
 import { DemoBanner } from './ui';
 
@@ -10,15 +11,14 @@ interface DemoUsers {
   users: DemoUser[];
 }
 
-const SECTIONS: { title: string; hint: string; match: (u: DemoUser) => boolean }[] = [
-  { title: 'Administrator', hint: 'Imports the Excel workbook and sees everything', match: (u) => u.position === 'admin' },
-  { title: 'Management', hint: 'Organization-wide dashboards', match: (u) => u.position === 'management' },
-  { title: 'Branch managers', hint: 'Their branch only', match: (u) => u.position === 'branch_manager' },
-  { title: 'Supervisors', hint: 'Their own team only', match: (u) => u.position === 'supervisor' },
-  { title: 'Sales representatives', hint: 'Employee dashboard and Sales Quest Arena', match: (u) => u.position === 'rep' },
+const ENTRIES: { title: string; hint: string; pick: (users: DemoUser[]) => DemoUser | undefined; testid: string }[] = [
+  { title: 'مدیر کل', hint: 'داشبورد سازمان، ورود اطلاعات و مدیریت مأموریت‌ها', pick: (u) => u.find((x) => x.position === 'admin'), testid: 'login-gm' },
+  { title: 'مدیر شعبه', hint: 'عملکرد شعبه و تیم‌های آن', pick: (u) => u.find((x) => x.position === 'branch_manager'), testid: 'login-branch' },
+  { title: 'سرپرست فروش', hint: 'عملکرد ویزیتورهای تیم', pick: (u) => u.find((x) => x.position === 'supervisor'), testid: 'login-supervisor' },
+  { title: 'ویزیتور', hint: 'پنل بازی؛ مأموریت، امتیاز و رتبه', pick: (u) => u.find((x) => x.employee_code === 'VIS-002') ?? u.find((x) => x.position === 'rep'), testid: 'login-visitor' },
 ];
 
-/** Demo account picker. Real login (SSO/OTP) is explicitly out of scope for the demo. */
+/** Demo entry screen. Real sign-in (SSO/OTP) is out of scope; each card opens a demo identity. */
 export function LoginPage({ expired }: { expired?: boolean }) {
   const { login } = useSession();
   const [data, setData] = useState<DemoUsers | null>(null);
@@ -38,7 +38,7 @@ export function LoginPage({ expired }: { expired?: boolean }) {
     try {
       await login(user.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed.');
+      setError(err instanceof Error ? err.message : 'ورود انجام نشد.');
       setBusy(null);
     }
   };
@@ -47,12 +47,12 @@ export function LoginPage({ expired }: { expired?: boolean }) {
     <div className="k-login">
       <div className="k-login__card">
         <Logo />
-        <h1>Kiloos demo</h1>
-        <p className="k-muted">Pick a demo account. This is the live management demonstration — sign in as different roles to see what each one sees.</p>
+        <h1>دموی کیلوس</h1>
+        <p className="k-muted">یک محصول، دو تجربه: پنل مدیریت و بازی ویزیتور. با یکی از نقش‌های نمایشی وارد شوید؛ بعداً از نوار کنترل دمو می‌توانید فوراً بین نقش‌ها جابه‌جا شوید.</p>
         <DemoBanner notice={data?.notice} />
         {expired && (
           <div className="k-state k-state--error" role="alert">
-            <p>Your session expired. Please sign in again.</p>
+            <p>نشست شما منقضی شد. دوباره وارد شوید.</p>
           </div>
         )}
         {error && (
@@ -65,31 +65,24 @@ export function LoginPage({ expired }: { expired?: boolean }) {
             <span className="boot__spinner" aria-hidden="true" />
           </div>
         )}
-        {data &&
-          SECTIONS.map((section) => {
-            const users = data.users.filter(section.match);
-            if (users.length === 0) return null;
-            return (
-              <section key={section.title} className="k-login__group">
-                <h2>
-                  {section.title} <small>{section.hint}</small>
-                </h2>
-                <div className="k-login__list">
-                  {users.map((user) => (
-                    <button key={user.id} className="k-login__user" onClick={() => void pick(user)} disabled={busy !== null} data-testid={`login-${user.employee_code ?? user.position}`}>
-                      <b dir="auto">{user.name}</b>
-                      <span>
-                        {user.title}
-                        {user.branch_name ? ` · ${user.branch_name}` : ''}
-                      </span>
-                      {user.employee_code && <em>{user.employee_code}</em>}
-                      {busy === user.id && <i className="k-login__busy">Signing in…</i>}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+        {data && (
+          <div className="k-login__list k-login__list--roles">
+            {ENTRIES.map((entry) => {
+              const user = entry.pick(data.users);
+              if (!user) return null;
+              return (
+                <button key={entry.testid} className="k-login__user" onClick={() => void pick(user)} disabled={busy !== null} data-testid={entry.testid}>
+                  <b>{entry.title}</b>
+                  <span>{entry.hint}</span>
+                  <em dir="auto">
+                    {user.name} · {POSITION_FA[user.position]}
+                  </em>
+                  {busy === user.id && <i className="k-login__busy">در حال ورود…</i>}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

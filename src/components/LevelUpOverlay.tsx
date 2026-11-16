@@ -1,3 +1,4 @@
+import { n } from '../i18n';
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { getAchievement } from '../game/achievements';
 import { getLevelDef } from '../game/levels';
@@ -35,18 +36,18 @@ export function LevelUpOverlay({ claim, onClose }: LevelUpOverlayProps) {
     <div className="levelup" role="dialog" aria-modal="true" aria-labelledby="levelup-title" onClick={() => onClose()}>
       <Confetti burst={1} count={120} />
       <div className="levelup__card" onClick={(event) => event.stopPropagation()}>
-        <span className="levelup__kicker">Level up!</span>
+        <span className="levelup__kicker">ارتقای سطح!</span>
         <span className="levelup__badge" style={{ '--lc': level.color } as CSSProperties} aria-hidden="true">
-          {level.level}
+          {n(level.level)}
         </span>
         <h2 id="levelup-title">
-          Level {level.level} · {level.title}
+          سطح {n(level.level)} · {level.title}
         </h2>
         <p>
-          +{claim.xp} game XP from your weekly quest · {claim.xp_after} XP total
+          +{n(claim.xp)} امتیاز تجربه از چالش هفتگی · مجموع {n(claim.xp_after)} امتیاز
         </p>
         {unlocked.length > 0 && (
-          <ul className="levelup__badges" aria-label="Achievements unlocked">
+          <ul className="levelup__badges" aria-label="دستاوردهای جدید">
             {unlocked.map((a) => (
               <li key={a.id}>
                 <span aria-hidden="true">{a.emoji}</span> {a.title}
@@ -55,7 +56,7 @@ export function LevelUpOverlay({ claim, onClose }: LevelUpOverlayProps) {
           </ul>
         )}
         <button type="button" className="btn btn--green" onClick={() => onClose()}>
-          Keep going
+          ادامه می‌دهم
         </button>
       </div>
     </div>

@@ -83,6 +83,20 @@ export interface Overview {
   reps: RepRow[];
   gamification?: { players: number; total_xp: number; missions_completed: number; org_points: number };
   data_origin?: OriginCounts;
+  command_center?: CommandCenter;
+}
+
+export interface CommandCenter {
+  label: string;
+  window_days: number;
+  reps: number;
+  players: number;
+  active_players: number;
+  mission_completion: { done: number; possible: number; pct: number; missions_per_rep: number };
+  xp_distribution: { level: number; title: string; reps: number; xp: number }[];
+  recent_achievements: { user_id: string; name: string; achievement: string; at: string }[];
+  recent_claims: { user_id: string; name: string; quest: string; xp: number; at: string }[];
+  note: string;
 }
 
 export interface BranchDetail {

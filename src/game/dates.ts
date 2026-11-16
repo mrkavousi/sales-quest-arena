@@ -1,3 +1,4 @@
+import { n } from '../i18n';
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Local calendar day key, e.g. "2026-11-12". */
@@ -25,18 +26,18 @@ export function formatCountdown(ms: number): string {
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  return h > 0 ? `${h}h ${pad(m)}m` : `${m}m ${pad(s)}s`;
+  return h > 0 ? `${n(h)} ساعت و ${n(m)} دقیقه` : `${n(m)} دقیقه و ${n(s)} ثانیه`;
 }
 
 export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
 }
 
 /** "Today", "Yesterday" or a short date. */
 export function formatDayLabel(iso: string, now: Date = new Date()): string {
   const key = toDateKey(new Date(iso));
   const diff = daysBetween(key, toDateKey(now));
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  return new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  if (diff === 0) return 'امروز';
+  if (diff === 1) return 'دیروز';
+  return new Date(iso).toLocaleDateString('fa-IR-u-ca-persian', { weekday: 'long', month: 'long', day: 'numeric' });
 }

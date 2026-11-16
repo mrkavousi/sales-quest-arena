@@ -1,3 +1,4 @@
+import { n } from '../i18n';
 import type { CSSProperties } from 'react';
 import { CATEGORIES } from '../game/missions';
 import type { MissionView } from '../game/types';
@@ -36,7 +37,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
   const allDone = done === missions.length;
 
   return (
-    <section className="map" aria-label="Mission map">
+    <section className="map" aria-label="نقشهٔ مأموریت‌ها">
       <div className="map__sky" aria-hidden="true">
         <span className="map__cloud map__cloud--a"><Scenery kind="cloud" size={64} /></span>
         <span className="map__cloud map__cloud--b"><Scenery kind="cloud" size={44} /></span>
@@ -45,12 +46,12 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
 
       <header className="map__head">
         <div className="map__ribbon">
-          <span className="map__world">World 1</span>
-          <h2>Quest Island</h2>
+          <span className="map__world">جهان ۱</span>
+          <h2>جزیرهٔ مأموریت</h2>
         </div>
-        <div className="map__count" aria-label={`${done} of ${missions.length} missions completed`}>
+        <div className="map__count" aria-label={`${n(done)} از ${n(missions.length)} مأموریت تکمیل شد`}>
           <Icon name="check" size={14} strokeWidth={3.4} />
-          {done}/{missions.length}
+          {n(done)}/{n(missions.length)}
         </div>
       </header>
 
@@ -95,7 +96,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
           const isActive = m.id === activeId;
           const x = nodeX(i);
           const mascotRight = x <= 160;
-          const cta = m.status === 'in_progress' ? 'Continue' : m.status === 'completed' ? 'Play again' : 'Start';
+          const cta = m.status === 'in_progress' ? 'ادامه' : m.status === 'completed' ? 'انجام دوباره' : 'شروع';
           return (
             <div
               key={m.id}
@@ -113,7 +114,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
               <button
                 className="node__btn"
                 onClick={() => onSelect(m.id)}
-                aria-label={`${m.title} — ${m.status.replace('_', ' ')}${m.isDaily && !m.dailyDone ? ', daily challenge' : ''}`}
+                aria-label={`${m.title} — ${{ locked: 'قفل', available: 'آماده', in_progress: 'در حال انجام', completed: 'تکمیل‌شده' }[m.status]}${m.isDaily && !m.dailyDone ? '، مأموریت روزانه' : ''}`}
               >
                 {isActive && <span className="node__pulse" aria-hidden="true" />}
                 {m.status === 'in_progress' && (
@@ -127,13 +128,13 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
                     <Icon name="check" size={15} strokeWidth={4} />
                   </span>
                 )}
-                {m.isDaily && !m.dailyDone && m.status !== 'locked' && <span className="node__daily" aria-hidden="true">Daily</span>}
+                {m.isDaily && !m.dailyDone && m.status !== 'locked' && <span className="node__daily" aria-hidden="true">روزانه</span>}
               </button>
               <div className="node__label">
                 <span className="node__title">
                   {m.shortTitle}
                   {m.completions > 0 && m.bestRating !== null && (
-                    <span className="node__rating" aria-label={`best rating ${m.bestRating} of 5`}>
+                    <span className="node__rating" aria-label={`بهترین امتیاز ${m.bestRating} از ۵`}>
                       <StarIcon size={13} />
                       {m.bestRating}
                     </span>
@@ -146,7 +147,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
 
         <div className={`map__chest${allDone ? ' is-open' : ''}`} style={{ top: chestY }}>
           <TreasureChest size={86} open={allDone} />
-          <span className="map__chest-label">{allDone ? 'Island cleared! World 2 is on the way' : 'Clear the island — more worlds coming soon'}</span>
+          <span className="map__chest-label">{allDone ? 'جزیره فتح شد! جهان ۲ به‌زودی می‌رسد' : 'همهٔ مأموریت‌ها را کامل کنید — جهان‌های بیشتری در راه است'}</span>
         </div>
       </div>
     </section>

@@ -17,7 +17,7 @@ export function PlayPage({ missionId }: { missionId: string | null }) {
       return;
     }
     if (!startMission(mission.id)) {
-      toast('That mission is still locked.', 'warn');
+      toast('این مأموریت هنوز قفل است.', 'warn');
       navigate('/', { replace: true });
       return;
     }

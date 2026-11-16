@@ -31,13 +31,13 @@ export function WelcomePage() {
         <div className="welcome__hero">
           <Mascot size={120} mood="cheer" />
           <div className="welcome__bubble">
-            Hi, I&apos;m <b>Pip</b>! Turn your sales day into a quest. Ready?
+            سلام، من <b>پیپ</b> هستم! روز فروش شما را به یک ماجراجویی تبدیل می‌کنم. آماده‌اید؟
           </div>
         </div>
 
         <fieldset className="welcome__field">
-          <legend>Choose your hero</legend>
-          <div className="avatar-picker" role="radiogroup" aria-label="Avatar">
+          <legend>قهرمان خود را انتخاب کنید</legend>
+          <div className="avatar-picker" role="radiogroup" aria-label="آواتار">
             {AVATAR_IDS.map((id) => (
               <button
                 key={id}
@@ -58,13 +58,13 @@ export function WelcomePage() {
         </fieldset>
 
         <label className="welcome__field">
-          <span>Your player name</span>
+          <span>نام بازیکن</span>
           <input
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={24}
-            placeholder="e.g. Alex"
+            placeholder="مثلاً: سارا"
             autoComplete="given-name"
             enterKeyHint="go"
             onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -72,9 +72,9 @@ export function WelcomePage() {
         </label>
 
         <button className="btn btn--yellow btn--block btn--lg" type="button" onClick={submit}>
-          Enter the arena
+          ورود به عرصه
         </button>
-        <p className="welcome__fine">Your progress is saved on this device.</p>
+        <p className="welcome__fine">پیشرفت شما ذخیره می‌شود.</p>
       </div>
     </div>
   );

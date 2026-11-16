@@ -18,7 +18,15 @@ export type RouteName =
   | 'branch'
   | 'rep'
   | 'imports'
-  | 'import';
+  | 'import'
+  // Administrator sections
+  | 'org'
+  | 'users'
+  | 'teams'
+  | 'missionsadmin'
+  | 'sales'
+  | 'points'
+  | 'activity';
 
 export interface Route {
   name: RouteName;
@@ -38,6 +46,13 @@ const NAMES: Record<string, RouteName> = {
   rep: 'rep',
   imports: 'imports',
   import: 'import',
+  org: 'org',
+  users: 'users',
+  teams: 'teams',
+  manage: 'missionsadmin',
+  sales: 'sales',
+  points: 'points',
+  activity: 'activity',
 };
 
 export function parseRoute(hash: string): Route {

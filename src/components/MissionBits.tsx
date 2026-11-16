@@ -1,12 +1,13 @@
 import { DIFFICULTY } from '../game/missions';
 import type { MissionDifficulty, MissionStatus } from '../game/types';
+import { n } from '../i18n';
 import { Icon, StarIcon, type IconName } from './ui/Icon';
 
 const STATUS: Record<MissionStatus, { label: string; icon: IconName | null }> = {
-  locked: { label: 'Locked', icon: 'lock' },
-  available: { label: 'Available', icon: null },
-  in_progress: { label: 'In progress', icon: 'play' },
-  completed: { label: 'Completed', icon: 'check' },
+  locked: { label: 'قفل', icon: 'lock' },
+  available: { label: 'آماده', icon: null },
+  in_progress: { label: 'در حال انجام', icon: 'play' },
+  completed: { label: 'تکمیل‌شده', icon: 'check' },
 };
 
 export function StatusPill({ status }: { status: MissionStatus }) {
@@ -20,12 +21,12 @@ export function StatusPill({ status }: { status: MissionStatus }) {
 }
 
 export function DifficultyDots({ difficulty }: { difficulty: MissionDifficulty }) {
-  const d = DIFFICULTY[difficulty];
+  const d = DIFFICULTY[difficulty] ?? DIFFICULTY.medium;
   return (
-    <span className="difficulty" title={`Difficulty: ${d.label}`}>
+    <span className="difficulty" title={`سطح دشواری: ${d.label}`}>
       <span className="difficulty__dots" aria-hidden="true">
-        {[1, 2, 3].map((n) => (
-          <i key={n} className={n <= d.dots ? 'is-on' : ''} />
+        {[1, 2, 3].map((i) => (
+          <i key={i} className={i <= d.dots ? 'is-on' : ''} />
         ))}
       </span>
       {d.label}
@@ -35,9 +36,9 @@ export function DifficultyDots({ difficulty }: { difficulty: MissionDifficulty }
 
 export function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
-    <span className="stars-mini" role="img" aria-label={`${value} out of 5 stars`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <StarIcon key={n} size={size} filled={n <= value} />
+    <span className="stars-mini" role="img" aria-label={`${n(value)} از ۵ ستاره`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <StarIcon key={i} size={size} filled={i <= value} />
       ))}
     </span>
   );

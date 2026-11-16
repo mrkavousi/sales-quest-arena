@@ -1,3 +1,4 @@
+import { n } from '../i18n';
 import type { CSSProperties } from 'react';
 import { Mascot } from '../components/art/Mascot';
 import { CATEGORY_ICON } from '../components/art/MissionArt';
@@ -45,10 +46,10 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
         </div>
         {typeof noteText === 'string' && noteText && <p className="hcard__note">“{noteText}”</p>}
         <div className="hcard__rewards">
-          <span className="hcard__reward"><XpIcon size={16} />+{entry.rewards.xp} XP</span>
-          <span className="hcard__reward"><CoinIcon size={16} />+{entry.rewards.coins}</span>
-          {entry.wasDaily && <span className="pill pill--daily">Daily bonus</span>}
-          {entry.levelAfter > entry.levelBefore && <span className="pill pill--level">Level {entry.levelAfter}!</span>}
+          <span className="hcard__reward"><XpIcon size={16} />+{n(entry.rewards.xp)} امتیاز</span>
+          <span className="hcard__reward"><CoinIcon size={16} />+{n(entry.rewards.coins)}</span>
+          {entry.wasDaily && <span className="pill pill--daily">جایزهٔ روزانه</span>}
+          {entry.levelAfter > entry.levelBefore && <span className="pill pill--level">سطح {n(entry.levelAfter)}!</span>}
         </div>
       </div>
     </li>
@@ -69,25 +70,25 @@ export function HistoryPage() {
   return (
     <div className="pagebody">
       <header className="pagehead">
-        <h1>Mission History</h1>
-        <p>Every quest you have completed, newest first.</p>
+        <h1>تاریخچهٔ مأموریت‌ها</h1>
+        <p>همهٔ مأموریت‌های انجام‌شده، تازه‌ترین در بالا.</p>
       </header>
 
       {progress.history.length === 0 ? (
         <div className="empty">
           <Mascot size={110} mood="think" />
-          <h2>No missions yet</h2>
-          <p>Complete your first mission and it will show up here.</p>
+          <h2>هنوز مأموریتی انجام نشده</h2>
+          <p>اولین مأموریت خود را کامل کنید تا اینجا نمایش داده شود.</p>
           <button className="btn btn--green" onClick={() => navigate('/')}>
-            Go to the arena
+            بازگشت به صفحهٔ اصلی
           </button>
         </div>
       ) : (
         <>
           <div className="summary">
-            <div><b>{stats.missionsCompleted}</b><span>Missions</span></div>
-            <div><b>{xpFromMissions}</b><span>XP earned</span></div>
-            <div><b>{stats.ordersLogged}</b><span>Orders</span></div>
+            <div><b>{n(stats.missionsCompleted)}</b><span>مأموریت</span></div>
+            <div><b>{n(xpFromMissions)}</b><span>امتیاز تجربه</span></div>
+            <div><b>{n(stats.ordersLogged)}</b><span>سفارش</span></div>
           </div>
           {groups.map((group) => (
             <section key={group.label} className="hgroup">

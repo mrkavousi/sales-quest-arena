@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { GAME_CONFIG } from '../game/config';
 import { CATEGORIES } from '../game/missions';
+import { jperiod, n, pct } from '../i18n';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 import { MissionArt } from './art/MissionArt';
@@ -14,7 +15,7 @@ interface MissionDetailProps {
   onClose: () => void;
 }
 
-/** Mission introduction: illustration, description, time, reward preview and the Start button. */
+/** Mission introduction: illustration, objective, time, reward preview and the Start button. */
 export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
   const { missions, progress } = useGame();
   const mission = missions.find((m) => m.id === missionId);
@@ -28,10 +29,10 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
 
   const cta =
     mission.status === 'in_progress'
-      ? `Continue · step ${Math.min(mission.steps.length, (draft?.stepIndex ?? 0) + 1)} of ${mission.steps.length}`
+      ? `ادامه · مرحلهٔ ${n(Math.min(mission.steps.length, (draft?.stepIndex ?? 0) + 1))} از ${n(mission.steps.length)}`
       : mission.status === 'completed'
-        ? 'Play again'
-        : 'Start mission';
+        ? 'انجام دوباره'
+        : 'شروع مأموریت';
 
   const start = () => {
     buzz(15);
@@ -55,49 +56,50 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
           <div className="detail__tags">
             <span className="detail__cat">{meta.label}</span>
             <StatusPill status={mission.status} />
-            {dailyBonus && <span className="pill pill--daily">Daily challenge</span>}
+            {dailyBonus && <span className="pill pill--daily">مأموریت روزانه</span>}
           </div>
           <h2 className="detail__title">{mission.title}</h2>
-          <p className="detail__desc">{mission.description}</p>
+          <p className="detail__desc">
+            <b>هدف:</b> {mission.description}
+          </p>
 
           <div className="detail__facts">
-            <span><Icon name="clock" size={16} />About {mission.estimatedMinutes} min</span>
-            <span><Icon name="steps" size={16} />{mission.steps.length} quick challenges</span>
+            <span><Icon name="clock" size={16} />حدود {n(mission.estimatedMinutes)} دقیقه</span>
+            <span><Icon name="steps" size={16} />{n(mission.steps.length)} گام کوتاه</span>
             <DifficultyDots difficulty={mission.difficulty} />
           </div>
 
-          <div className="detail__rewards" aria-label="Reward preview">
+          <div className="detail__rewards" aria-label="پاداش">
             <div className="rewardchip rewardchip--xp">
               <XpIcon size={30} />
-              <div><b>+{mission.xpReward + (dailyBonus ? GAME_CONFIG.rewards.dailyBonusXp : 0)}</b><span>XP</span></div>
+              <div><b>+{n(mission.xpReward + (dailyBonus ? GAME_CONFIG.rewards.dailyBonusXp : 0))}</b><span>امتیاز تجربه</span></div>
             </div>
             <div className="rewardchip rewardchip--coin">
               <CoinIcon size={30} />
-              <div><b>+{mission.coinReward}</b><span>Coins</span></div>
+              <div><b>+{n(mission.coinReward)}</b><span>سکه</span></div>
             </div>
           </div>
           {dailyBonus && (
             <p className="detail__hint">
-              <span aria-hidden="true">☀️</span> Includes today&apos;s <b>+{GAME_CONFIG.rewards.dailyBonusXp} XP daily bonus</b>
+              <span aria-hidden="true">☀️</span> شامل <b>{n(GAME_CONFIG.rewards.dailyBonusXp)} امتیاز جایزهٔ مأموریت روزانه</b>
             </p>
           )}
           {hasOrderBonus && !locked && (
             <p className="detail__hint">
-              <span aria-hidden="true">🛒</span> Land an order for <b>+{GAME_CONFIG.rewards.orderBonusXp} bonus XP</b>
+              <span aria-hidden="true">🛒</span> با ثبت سفارش، <b>{n(GAME_CONFIG.rewards.orderBonusXp)} امتیاز اضافه</b> می‌گیرید
             </p>
           )}
 
           {mission.completions > 0 && (
             <p className="detail__record">
-              Completed <b>{mission.completions}×</b>
-              {mission.bestRating !== null && <> · best <Stars value={mission.bestRating} size={14} /></>}
+              <b>{n(mission.completions)} بار</b> انجام شده
+              {mission.bestRating !== null && <> · بهترین امتیاز <Stars value={mission.bestRating} size={14} /></>}
             </p>
           )}
 
           {mission.salesGateInfo && (
             <p className="detail__hint" data-testid="sales-gate">
-              <span aria-hidden="true">📈</span> Server check: <b>{mission.salesGateInfo.attainmentPct ?? 0}%</b> of your {mission.salesGateInfo.period ?? ''} target
-              (needs {mission.salesGateInfo.minPct}%) · <em>{mission.salesGateInfo.status} demo rule</em>
+              <span aria-hidden="true">📈</span> بررسی سرور: <b>{pct(mission.salesGateInfo.attainmentPct ?? 0)}</b> از هدف دورهٔ {mission.salesGateInfo.period ? jperiod(mission.salesGateInfo.period) : ''} (حداقل {pct(mission.salesGateInfo.minPct)}) · <em>قاعدهٔ نمایشی ({mission.salesGateInfo.status === 'PROPOSED' ? 'پیشنهادی' : mission.salesGateInfo.status})</em>
             </p>
           )}
 
@@ -107,7 +109,7 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
               {mission.lockReason}
             </div>
           ) : (
-            <button className="btn btn--green btn--block btn--lg detail__cta" onClick={start}>
+            <button className="btn btn--green btn--block btn--lg detail__cta" onClick={start} data-testid="start-mission">
               {cta}
             </button>
           )}

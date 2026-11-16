@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { api, ApiError } from '../api/client';
 import type { OriginCounts } from '../api/types';
+import { brandName, jdateTime, money, n, pct, statusName } from '../i18n';
 
 /* ------------------------------------------------------------------ data hook */
 
@@ -26,7 +27,7 @@ export function useApi<T>(path: string | null): Remote<T> {
     api
       .get<T>(path)
       .then((result) => alive && setData(result))
-      .catch((err: unknown) => alive && setError(err instanceof ApiError ? err.message : 'Could not load data.'))
+      .catch((err: unknown) => alive && setError(err instanceof ApiError ? err.message : 'بارگذاری اطلاعات ممکن نشد.'))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
@@ -37,23 +38,11 @@ export function useApi<T>(path: string | null): Remote<T> {
   return { data, error, loading, reload };
 }
 
-/* ------------------------------------------------------------------ formatting */
+/* ------------------------------------------------------------------ formatting (Persian) */
 
-/** Amounts are Rials in the sample workbook; show millions to stay readable. */
-export function formatMoney(value: number): string {
-  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 1 })}M`;
-  return value.toLocaleString('en-US');
-}
-
-export function formatPct(value: number | null | undefined): string {
-  return value === null || value === undefined ? '—' : `${value.toLocaleString('en-US', { maximumFractionDigits: 1 })}%`;
-}
-
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-}
+export const formatMoney = money;
+export const formatPct = pct;
+export const formatDate = jdateTime;
 
 export const BRAND_COLORS: Record<string, string> = { EFES: '#5b3df5', MATADOR: '#e8741a', UNASSIGNED: '#9a93c2' };
 export const brandColor = (code: string): string => BRAND_COLORS[code] ?? '#2ea8ff';
@@ -63,8 +52,8 @@ export const brandColor = (code: string): string => BRAND_COLORS[code] ?? '#2ea8
 export function DemoBanner({ notice }: { notice?: string }) {
   return (
     <div className="k-demo" role="note">
-      <b>DEMO</b>
-      <span>{notice ?? 'Sample data and PROPOSED rules. Not real Kiloos sales, not approved KPIs; no financial reward is paid.'}</span>
+      <b>نمایشی</b>
+      <span>{notice ?? 'داده‌های نمونه و قواعد پیشنهادی. این ارقام فروش واقعی کیلوس یا شاخص مصوب نیستند و هیچ پاداش مالی پرداخت نمی‌شود.'}</span>
     </div>
   );
 }
@@ -75,14 +64,22 @@ export function OriginChips({ origin }: { origin?: OriginCounts }) {
   const imported = origin.imported ?? 0;
   return (
     <span className="k-origin">
-      {sample > 0 && <span className="k-chip k-chip--sample" title="Rows from a workbook that declares itself SAMPLE">SAMPLE data · {sample} rows</span>}
-      {imported > 0 && <span className="k-chip k-chip--real" title="Rows from an operational workbook">Imported data · {imported} rows</span>}
+      {sample > 0 && (
+        <span className="k-chip k-chip--sample" title="ردیف‌های فایلی که خود را «نمونه» اعلام کرده است">
+          داده نمونه · {n(sample)} ردیف
+        </span>
+      )}
+      {imported > 0 && (
+        <span className="k-chip k-chip--real" title="ردیف‌های فایل عملیاتی">
+          داده واردشده · {n(imported)} ردیف
+        </span>
+      )}
     </span>
   );
 }
 
 export function StatusChip({ status }: { status: string }) {
-  return <span className={`k-chip k-chip--${status}`}>{status.replace('_', ' ')}</span>;
+  return <span className={`k-chip k-chip--${status}`}>{statusName(status)}</span>;
 }
 
 export function Tile({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: 'good' | 'warn' | 'bad' }) {
@@ -96,16 +93,16 @@ export function Tile({ label, value, sub, tone }: { label: string; value: ReactN
 }
 
 /** Attainment is always shown as text too, never colour alone. */
-export function AttainmentBar({ pct, label }: { pct: number | null; label?: string }) {
-  const width = Math.max(0, Math.min(pct ?? 0, 120));
-  const tone = pct === null ? 'none' : pct >= 100 ? 'good' : pct >= 80 ? 'ok' : pct >= 60 ? 'warn' : 'bad';
+export function AttainmentBar({ pct: value, label }: { pct: number | null; label?: string }) {
+  const width = Math.max(0, Math.min(value ?? 0, 120));
+  const tone = value === null ? 'none' : value >= 100 ? 'good' : value >= 80 ? 'ok' : value >= 60 ? 'warn' : 'bad';
   return (
-    <span className="k-att" role="img" aria-label={`${label ?? 'Attainment'} ${formatPct(pct)}`}>
+    <span className="k-att" role="img" aria-label={`${label ?? 'تحقق هدف'} ${pct(value)}`}>
       <span className="k-att__track">
         <span className={`k-att__fill k-att__fill--${tone}`} style={{ width: `${(width / 120) * 100}%` }} />
         <span className="k-att__mark" />
       </span>
-      <b>{formatPct(pct)}</b>
+      <b>{pct(value)}</b>
     </span>
   );
 }
@@ -124,11 +121,11 @@ export function Card({ title, action, children, className }: { title?: ReactNode
   );
 }
 
-export function Loading({ what = 'data' }: { what?: string }) {
+export function Loading({ what = 'اطلاعات' }: { what?: string }) {
   return (
     <div className="k-state" role="status">
       <span className="boot__spinner" aria-hidden="true" />
-      <p>Loading {what}…</p>
+      <p>در حال بارگذاری {what}…</p>
     </div>
   );
 }
@@ -139,9 +136,17 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
       <p>{message}</p>
       {onRetry && (
         <button className="btn btn--ghost btn--sm" onClick={onRetry}>
-          Try again
+          تلاش دوباره
         </button>
       )}
+    </div>
+  );
+}
+
+export function EmptyState({ children }: { children: ReactNode }) {
+  return (
+    <div className="k-state" role="status">
+      <p>{children}</p>
     </div>
   );
 }
@@ -159,7 +164,7 @@ export function Remoted<T>({ remote, what, children }: { remote: Remote<T>; what
 
 /** Stacked daily-sales columns for one rep (inline SVG, brand colours + legend + totals). */
 export function DailyChart({ days, brands }: { days: { date: string; amount: number; by_brand: Record<string, number> }[]; brands: string[] }) {
-  if (days.length === 0) return <p className="k-muted">No processed sales in this period.</p>;
+  if (days.length === 0) return <p className="k-muted">در این دوره فروش پردازش‌شده‌ای ثبت نشده است.</p>;
   const width = 640;
   const height = 180;
   const pad = { l: 8, r: 8, t: 12, b: 26 };
@@ -168,14 +173,14 @@ export function DailyChart({ days, brands }: { days: { date: string; amount: num
   const barW = Math.min(36, slot * 0.7);
   return (
     <figure className="k-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Daily processed sales, ${days.length} days with sales`}>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`فروش روزانه پردازش‌شده، ${n(days.length)} روز دارای فروش`}>
         <line x1={pad.l} x2={width - pad.r} y1={height - pad.b} y2={height - pad.b} stroke="var(--line)" />
         {days.map((day, i) => {
           let y = height - pad.b;
           const x = pad.l + i * slot + (slot - barW) / 2;
           return (
             <g key={day.date}>
-              <title>{`${day.date}: ${formatMoney(day.amount)} Rials`}</title>
+              <title>{`${day.date}: ${money(day.amount)} ریال`}</title>
               {brands.map((brand) => {
                 const value = day.by_brand[brand] ?? 0;
                 const h = (value / max) * (height - pad.t - pad.b);
@@ -183,7 +188,7 @@ export function DailyChart({ days, brands }: { days: { date: string; amount: num
                 return h > 0 ? <rect key={brand} x={x} y={y} width={barW} height={h} rx={3} fill={brandColor(brand)} /> : null;
               })}
               <text x={x + barW / 2} y={height - 8} textAnchor="middle" fontSize="11" fill="var(--ink-2)">
-                {day.date.slice(8)}
+                {n(Number(day.date.slice(8)))}
               </text>
             </g>
           );
@@ -193,10 +198,10 @@ export function DailyChart({ days, brands }: { days: { date: string; amount: num
         {brands.map((b) => (
           <span key={b} className="k-legend">
             <i style={{ background: brandColor(b) }} />
-            {b}
+            {brandName(b)}
           </span>
         ))}
-        <span className="k-muted">Day of month · peak {formatMoney(max)} Rials</span>
+        <span className="k-muted">روز ماه · بیشینه {money(max)} ریال</span>
       </figcaption>
     </figure>
   );

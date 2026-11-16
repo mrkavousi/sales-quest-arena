@@ -59,7 +59,7 @@ function RatingStepView({ step, value, onChange }: StepProps<RatingStep>) {
             key={n}
             role="radio"
             aria-checked={rating === n}
-            aria-label={`${n} star${n > 1 ? 's' : ''} — ${step.scale[n - 1]}`}
+            aria-label={`${n} ستاره — ${step.scale[n - 1]}`}
             className={`rating__star${n <= rating ? ' is-on' : ''}`}
             style={{ '--i': n - 1 } as CSSProperties}
             onClick={() => {
@@ -75,7 +75,7 @@ function RatingStepView({ step, value, onChange }: StepProps<RatingStep>) {
         ))}
       </div>
       <div className={`rating__label${rating ? ' is-set' : ''}`} key={`label-${rating}`}>
-        {rating ? step.scale[rating - 1] : 'Tap a star to rate'}
+        {rating ? step.scale[rating - 1] : 'برای امتیاز دادن یک ستاره را لمس کنید'}
       </div>
     </div>
   );

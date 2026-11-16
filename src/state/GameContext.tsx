@@ -171,7 +171,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         commit(() => result.progress);
         return result.entry;
       } catch (err) {
-        toast(err instanceof MissionError ? err.message : 'Something went wrong. Please try again.', 'warn');
+        toast(err instanceof MissionError ? err.message : 'مشکلی پیش آمد. دوباره تلاش کنید.', 'warn');
         return null;
       }
     },

@@ -1,3 +1,4 @@
+import { n } from '../i18n';
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { Leaderboard } from '../api/types';
@@ -39,33 +40,33 @@ export function RankCard() {
   return (
     <section className="panel rank-card" aria-labelledby="rank-title">
       <header className="panel__head">
-        <h2 id="rank-title">Your ranking</h2>
-        <span className="demo-tag">SAMPLE</span>
+        <h2 id="rank-title">رتبهٔ شما</h2>
+        <span className="demo-tag">نمونه</span>
       </header>
-      {!board && !failed && <p className="rank-card__note">Loading the ranking…</p>}
-      {failed && <p className="rank-card__note">The ranking is unavailable right now. Your progress is unaffected.</p>}
-      {board && !me && <p className="rank-card__note">You are not on the ranking yet.</p>}
+      {!board && !failed && <p className="rank-card__note">در حال بارگذاری رتبه‌بندی…</p>}
+      {failed && <p className="rank-card__note">رتبه‌بندی اکنون در دسترس نیست؛ پیشرفت شما تغییری نکرده است.</p>}
+      {board && !me && <p className="rank-card__note">هنوز در رتبه‌بندی نیستید.</p>}
       {board && me && (
         <div className="rank-card__body">
-          <div className="rank-card__pos" aria-label={`Rank ${me.rank} of ${board.rows.length}`}>
-            <small>Position</small>
-            <b>#{me.rank}</b>
-            <span>of {board.rows.length}</span>
+          <div className="rank-card__pos" aria-label={`رتبهٔ ${n(me.rank)} از ${n(board.rows.length)}`}>
+            <small>جایگاه</small>
+            <b>{n(me.rank)}</b>
+            <span>از {n(board.rows.length)}</span>
           </div>
           <dl className="rank-card__stats">
             <div>
-              <dt>Org points</dt>
-              <dd>{me.org_points}</dd>
+              <dt>امتیاز سازمانی</dt>
+              <dd>{n(me.org_points)}</dd>
             </div>
             <div>
-              <dt>Game XP</dt>
-              <dd>{me.game_xp}</dd>
+              <dt>امتیاز تجربه</dt>
+              <dd>{n(me.game_xp)}</dd>
             </div>
           </dl>
         </div>
       )}
       <button className="linkbtn rank-card__more" onClick={() => navigate('/board')}>
-        Full ranking →
+        ← رتبه‌بندی کامل
       </button>
     </section>
   );

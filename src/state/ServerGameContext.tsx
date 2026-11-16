@@ -87,7 +87,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       setCsrfToken(boot.csrf_token);
       apply(boot);
     } catch (err) {
-      setBootError(err instanceof Error ? err.message : 'Could not load your game.');
+      setBootError(err instanceof Error ? err.message : 'بارگذاری بازی ممکن نشد.');
     }
   }, [apply]);
 
@@ -110,7 +110,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
     (err: unknown, fallback: string) => {
       if (err instanceof ApiError) {
         if (err.status === 401) return; // SessionContext shows the "session expired" screen.
-        toast(err.isNetwork ? 'Cannot reach the server — check the connection and try again.' : err.message, 'warn');
+        toast(err.isNetwork ? 'ارتباط با سرور برقرار نشد؛ اتصال را بررسی کنید و دوباره تلاش کنید.' : err.message, 'warn');
         return;
       }
       toast(fallback, 'warn');
@@ -123,7 +123,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       void api
         .patch<{ progress: PlayerProgress }>('/api/v1/game/profile', { name: name.trim().slice(0, 24) || 'Rookie', avatar })
         .then((r) => patchProgress(() => r.progress))
-        .catch((err) => fail(err, 'Could not save your profile.'));
+        .catch((err) => fail(err, 'ذخیرهٔ پروفایل ممکن نشد.'));
     },
     [fail, patchProgress],
   );
@@ -137,7 +137,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       void api
         .patch<{ progress: PlayerProgress }>('/api/v1/game/profile', body)
         .then((r) => patchProgress(() => r.progress))
-        .catch((err) => fail(err, 'Could not save your profile.'));
+        .catch((err) => fail(err, 'ذخیرهٔ پروفایل ممکن نشد.'));
     },
     [fail, patchProgress],
   );
@@ -148,7 +148,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       if (!draft) return Promise.resolve();
       const request = api
         .put(`/api/v1/game/missions/${missionId}/draft`, { step_index: draft.stepIndex, answers: draft.answers })
-        .catch((err) => fail(err, 'Could not save your progress.'))
+        .catch((err) => fail(err, 'ذخیرهٔ پیشرفت ممکن نشد.'))
         .finally(() => {
           if (draftInflight.current.get(missionId) === request) draftInflight.current.delete(missionId);
         });
@@ -211,7 +211,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
         delete drafts[missionId];
         return { ...p, drafts };
       });
-      void api.del(`/api/v1/game/missions/${missionId}/draft`).catch((err) => fail(err, 'Could not discard the draft.'));
+      void api.del(`/api/v1/game/missions/${missionId}/draft`).catch((err) => fail(err, 'حذف پیش‌نویس ممکن نشد.'));
     },
     [fail, patchProgress],
   );
@@ -244,9 +244,9 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
           toast(err.message, 'warn');
           void load();
         } else if (err instanceof ApiError && err.isNetwork) {
-          toast('No connection — your answers are kept. Tap “Complete mission” to retry; you will not be paid twice.', 'warn');
+          toast('ارتباط قطع شد؛ پاسخ‌های شما حفظ شده است. دوباره «تکمیل مأموریت» را بزنید؛ پاداش دوبار پرداخت نمی‌شود.', 'warn');
         } else {
-          fail(err, 'The server could not confirm this mission. Please try again.');
+          fail(err, 'سرور این مأموریت را تأیید نکرد. دوباره تلاش کنید.');
         }
         return null;
       }
@@ -273,9 +273,9 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
           toast(err.message, 'warn');
           void load();
         } else if (err instanceof ApiError && err.isNetwork) {
-          toast('No connection — the quest is still claimable. Tap again to retry; you will not be paid twice.', 'warn');
+          toast('ارتباط قطع شد؛ چالش همچنان قابل دریافت است. دوباره تلاش کنید؛ پاداش دوبار پرداخت نمی‌شود.', 'warn');
         } else {
-          fail(err, 'The server could not confirm this quest. Please try again.');
+          fail(err, 'سرور این چالش را تأیید نکرد. دوباره تلاش کنید.');
         }
         return null;
       }
@@ -284,7 +284,7 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
   );
 
   const resetProgress = useCallback(() => {
-    toast('Server-confirmed progress cannot be reset from the app.', 'info');
+    toast('پیشرفت تأییدشده توسط سرور از داخل برنامه بازنشانی نمی‌شود.', 'info');
   }, [toast]);
 
   const progress = snap?.progress;
@@ -319,21 +319,21 @@ export function ServerGameProvider({ children }: { children: ReactNode }) {
       <div className="boot" role="status" aria-live="polite">
         {bootError ? (
           <>
-            <h1>We couldn’t load your game</h1>
+            <h1>بارگذاری بازی ممکن نشد</h1>
             <p>{bootError}</p>
             <div className="boot__actions">
               <button className="btn btn--green" onClick={() => void load()}>
-                Try again
+                تلاش دوباره
               </button>
               <button className="btn btn--ghost" onClick={() => void logout()}>
-                Sign out
+                خروج
               </button>
             </div>
           </>
         ) : (
           <>
             <span className="boot__spinner" aria-hidden="true" />
-            <p>Loading your arena…</p>
+            <p>در حال بارگذاری عرصهٔ شما…</p>
           </>
         )}
       </div>

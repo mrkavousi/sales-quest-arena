@@ -20,12 +20,12 @@ const fresh = (): PlayerProgress => ensureDaily(createInitialProgress(day(1)), '
 
 describe('levels', () => {
   it('maps XP to the configured levels', () => {
-    expect(getLevelInfo(0).title).toBe('Rookie');
+    expect(getLevelInfo(0).title).toBe('تازه‌کار');
     expect(getLevelInfo(149).level).toBe(1);
-    expect(getLevelInfo(150).title).toBe('Explorer');
-    expect(getLevelInfo(400).title).toBe('Challenger');
-    expect(getLevelInfo(800).title).toBe('Performer');
-    expect(getLevelInfo(1400).title).toBe('Champion');
+    expect(getLevelInfo(150).title).toBe('کاوشگر');
+    expect(getLevelInfo(400).title).toBe('رقابت‌جو');
+    expect(getLevelInfo(800).title).toBe('حرفه‌ای');
+    expect(getLevelInfo(1400).title).toBe('قهرمان');
     expect(getLevelInfo(99999).isMax).toBe(true);
   });
   it('reports progress inside a level', () => {

@@ -10,6 +10,7 @@ import './styles/play.css';
 import './styles/kiloos.css';
 import './styles/home.css';
 import './styles/leaderboard.css';
+import './styles/admin.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -11,12 +11,12 @@ interface AvatarSpec {
 }
 
 export const AVATARS: Record<AvatarId, AvatarSpec> = {
-  fox: { name: 'Fox', bg: ['#ffe2b8', '#ffb86b'], fur: '#ff8a3d', dark: '#d9611b', light: '#fff6ea', ears: 'point' },
-  bear: { name: 'Bear', bg: ['#d7f0ff', '#8fd0ff'], fur: '#b07a4f', dark: '#8a5a36', light: '#ecd3b8', ears: 'round' },
-  cat: { name: 'Cat', bg: ['#ffe0ec', '#ffa6c4'], fur: '#7d86a8', dark: '#5b6388', light: '#eef0fa', ears: 'point' },
-  bunny: { name: 'Bunny', bg: ['#e4dcff', '#b9a4ff'], fur: '#fbf7ff', dark: '#d9cdf5', light: '#ffffff', ears: 'long' },
-  panda: { name: 'Panda', bg: ['#d9f7e6', '#8fe3b5'], fur: '#ffffff', dark: '#2c2a3a', light: '#ffffff', ears: 'round' },
-  frog: { name: 'Frog', bg: ['#fff3c4', '#ffd95e'], fur: '#5ccf6b', dark: '#35a548', light: '#d8f7c8', ears: 'bulb' },
+  fox: { name: 'روباه', bg: ['#ffe2b8', '#ffb86b'], fur: '#ff8a3d', dark: '#d9611b', light: '#fff6ea', ears: 'point' },
+  bear: { name: 'خرس', bg: ['#d7f0ff', '#8fd0ff'], fur: '#b07a4f', dark: '#8a5a36', light: '#ecd3b8', ears: 'round' },
+  cat: { name: 'گربه', bg: ['#ffe0ec', '#ffa6c4'], fur: '#7d86a8', dark: '#5b6388', light: '#eef0fa', ears: 'point' },
+  bunny: { name: 'خرگوش', bg: ['#e4dcff', '#b9a4ff'], fur: '#fbf7ff', dark: '#d9cdf5', light: '#ffffff', ears: 'long' },
+  panda: { name: 'پاندا', bg: ['#d9f7e6', '#8fe3b5'], fur: '#ffffff', dark: '#2c2a3a', light: '#ffffff', ears: 'round' },
+  frog: { name: 'قورباغه', bg: ['#fff3c4', '#ffd95e'], fur: '#5ccf6b', dark: '#35a548', light: '#d8f7c8', ears: 'bulb' },
 };
 
 interface AvatarProps {

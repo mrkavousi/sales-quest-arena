@@ -1,3 +1,4 @@
+import { jperiod, n } from '../../i18n';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { getAchievement } from '../../game/achievements';
 import { getLevelDef, getLevelInfo } from '../../game/levels';
@@ -77,39 +78,39 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
       <div className="result__stage">
         <RewardHero />
 
-        <h1 className="result__title">Mission Completed!</h1>
+        <h1 className="result__title">مأموریت تکمیل شد!</h1>
         <p className="result__mission">{mission.title}</p>
 
         <div className="result__rewards">
           <div className="rewardcard rewardcard--xp">
             <XpIcon size={44} />
-            <b>+{xpEarned}</b>
-            <span>XP earned</span>
+            <b>+{n(xpEarned)}</b>
+            <span>امتیاز تجربه</span>
           </div>
           <div className="rewardcard rewardcard--coin">
             <CoinIcon size={44} />
-            <b>+{coinsEarned}</b>
-            <span>Coins earned</span>
+            <b>+{n(coinsEarned)}</b>
+            <span>سکه</span>
           </div>
         </div>
 
         {entry.orgPoints && (
           <div className="result__org" role="note" data-testid="org-points">
-            <b>+{entry.orgPoints.points} organizational points</b>
+            <b>+{n(entry.orgPoints.points)} امتیاز سازمانی</b>
             <span>
-              Server-verified from your processed {entry.orgPoints.period} sales · recorded in the score ledger ·{' '}
-              <em>{entry.orgPoints.approvalStatus} DEMO RULE — needs business approval, not a financial reward</em>
+              تأییدشده توسط سرور بر پایهٔ فروش پردازش‌شدهٔ دورهٔ {jperiod(entry.orgPoints.period)} · ثبت‌شده در دفتر امتیاز ·{' '}
+              <em>قاعدهٔ نمایشی ({entry.orgPoints.approvalStatus === 'PROPOSED' ? 'پیشنهادی' : entry.orgPoints.approvalStatus}) — نیازمند تأیید کسب‌وکار است و پاداش مالی نیست</em>
             </span>
           </div>
         )}
 
-        <ul className="result__lines" aria-label="Reward breakdown">
+        <ul className="result__lines" aria-label="جزئیات پاداش">
           {entry.rewards.lines.map((line, i) => (
             <li key={line.ruleId} style={{ '--i': i } as CSSProperties}>
               <span>{line.label}</span>
               <span className="result__line-values">
-                {line.xp > 0 && <b className="is-xp">+{line.xp} XP</b>}
-                {line.coins > 0 && <b className="is-coin">+{line.coins} coins</b>}
+                {line.xp > 0 && <b className="is-xp">+{n(line.xp)} امتیاز</b>}
+                {line.coins > 0 && <b className="is-coin">+{n(line.coins)} سکه</b>}
               </span>
             </li>
           ))}
@@ -120,22 +121,22 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
           <div className="result__level-info">
             <div className="result__level-top">
               <span className="result__level-name">
-                Level {shown.level} · {shown.title}
+                سطح {n(shown.level)} · {shown.title}
               </span>
               <span className="result__total">
-                <b>{totalXp}</b> XP total
+                <b>{n(totalXp)}</b> امتیاز کل
               </span>
             </div>
-            <ProgressBar value={barValue} tone="yellow" size="lg" instant={phase === 'snap'} label="Level progress" />
+            <ProgressBar value={barValue} tone="yellow" size="lg" instant={phase === 'snap'} label="پیشرفت سطح" />
             <span className="result__level-hint">
-              {shown.isMax ? 'Max level reached — you are a Champion!' : `${Math.max(0, shown.nextMinXp! - totalXp)} XP to ${shown.nextTitle}`}
+              {shown.isMax ? 'به بالاترین سطح رسیدید — شما قهرمان هستید!' : `${n(Math.max(0, shown.nextMinXp! - totalXp))} امتیاز تا «${shown.nextTitle}»`}
             </span>
           </div>
         </div>
 
         {achievements.length > 0 && (
           <div className="result__achievements">
-            <h2>{achievements.length > 1 ? 'Achievements unlocked!' : 'Achievement unlocked!'}</h2>
+            <h2>{achievements.length > 1 ? 'دستاوردهای جدید!' : 'دستاورد جدید!'}</h2>
             <ul>
               {achievements.map((a, i) => (
                 <li key={a.id} style={{ '--i': i } as CSSProperties}>
@@ -153,7 +154,7 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
         <div className="result__streak">
           <FlameIcon size={22} />
           <span>
-            <b>{entry.streakAfter}-day streak</b> · {entry.streakAfter > 1 ? 'keep it burning!' : 'play again tomorrow'}
+            <b>{n(entry.streakAfter)} روز پیاپی</b> · {entry.streakAfter > 1 ? 'ادامه بدهید!' : 'فردا دوباره بازی کنید'}
           </span>
         </div>
       </div>
@@ -162,24 +163,24 @@ export function MissionResult({ entry, mission }: MissionResultProps) {
         <div className="result__foot-inner">
           <RewardFlyout active={collecting} />
           <button className="btn btn--yellow btn--block btn--lg" onClick={() => collect('/')} disabled={collecting}>
-            Collect &amp; continue
+            دریافت و ادامه
           </button>
           <button className="linkbtn linkbtn--light" onClick={() => navigate('/history')} disabled={collecting}>
-            View mission history
+            مشاهدهٔ تاریخچهٔ مأموریت‌ها
           </button>
         </div>
       </footer>
 
       {phase === 'levelup' && (
-        <div className="levelup" role="dialog" aria-modal="true" aria-label={`Level up! You reached level ${newLevel.level}`} onClick={() => setPhase('snap')}>
+        <div className="levelup" role="dialog" aria-modal="true" aria-label={`ارتقای سطح! به سطح ${n(newLevel.level)} رسیدید`} onClick={() => setPhase('snap')}>
           <span className="levelup__rays" aria-hidden="true" />
           <div className="levelup__card">
-            <span className="levelup__eyebrow">Level up!</span>
+            <span className="levelup__eyebrow">ارتقای سطح!</span>
             <LevelBadge level={newLevel.level} color={newLevel.color} size={130} />
             <h2>{newLevel.title}</h2>
-            <p>You reached Level {newLevel.level}. Keep the quests coming!</p>
+            <p>به سطح {n(newLevel.level)} رسیدید. مأموریت‌ها را ادامه دهید!</p>
             <button className="btn btn--yellow btn--block" onClick={() => setPhase('snap')} autoFocus>
-              Awesome!
+              عالی!
             </button>
           </div>
         </div>

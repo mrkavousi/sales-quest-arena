@@ -33,7 +33,7 @@ export function Sheet({ open, onClose, label, children, hideClose = false, size 
       <div className={`sheet__panel sheet__panel--${size}`}>
         <span className="sheet__grip" aria-hidden="true" />
         {!hideClose && (
-          <button className="iconbtn sheet__close" onClick={onClose} aria-label="Close">
+          <button className="iconbtn sheet__close" onClick={onClose} aria-label="بستن">
             <Icon name="close" size={20} />
           </button>
         )}

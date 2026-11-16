@@ -17,14 +17,14 @@
 .nav__tab.is-active .nav__icon { background: var(--primary-soft); transform: translateY(-2px); }
 
 @media (min-width: 960px) {
-  .nav { top: 0; right: auto; width: 250px; padding: 28px 18px; border-radius: 0; box-shadow: 2px 0 0 var(--line); display: flex; flex-direction: column; gap: 30px; background: #fff; }
+  .nav { top: var(--demo-h, 0px); bottom: auto; height: calc(100dvh - var(--demo-h, 0px)); overflow-y: auto; left: auto; right: 0; width: 250px; padding: 28px 18px; border-radius: 0; box-shadow: -2px 0 0 var(--line); display: flex; flex-direction: column; gap: 30px; background: #fff; }
   .nav__brand { display: block; padding: 0 8px; }
   .nav__tabs { display: flex; flex-direction: column; gap: 8px; height: auto; max-width: none; margin: 0; padding: 0; }
   .nav__tab { flex-direction: row; justify-content: flex-start; gap: 14px; padding: 12px 14px; border-radius: 16px; font-size: 16px; text-transform: uppercase; letter-spacing: 0.06em; transition: background 0.15s; }
   .nav__tab:hover { background: #f6f3ff; }
   .nav__tab.is-active { background: var(--primary-soft); box-shadow: inset 0 0 0 2px #cfc4ff; }
   .nav__icon, .nav__tab.is-active .nav__icon { width: auto; height: auto; background: none; transform: none; }
-  .shell__main { max-width: none; margin: 0; padding: 28px 32px 56px 282px; }
+  .shell__main { max-width: none; margin: 0; padding: 28px 282px 56px 32px; }
   .page { max-width: 1060px; margin: 0 auto; }
 }
 

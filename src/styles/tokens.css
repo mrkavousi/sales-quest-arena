@@ -10,7 +10,7 @@
 }
 
 :root {
-  --font: 'Nunito Variable', 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font: 'Vazirmatn', 'Nunito Variable', 'Nunito', Tahoma, ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   /* Brand */
   --indigo-950: #1b0f4d;

@@ -1,3 +1,4 @@
+import { jdateTime } from '../i18n';
 import { getAchievement } from './achievements';
 import { getMission } from './missions';
 import type { PlayerProgress, WeeklyQuests } from './types';
@@ -28,7 +29,7 @@ export function buildActivity(progress: PlayerProgress, quests: WeeklyQuests | n
       kind: 'mission',
       at: entry.completedAt,
       title: getMission(entry.missionId)?.title ?? entry.missionId,
-      detail: entry.wasDaily ? 'Daily challenge completed' : 'Mission completed',
+      detail: entry.wasDaily ? 'مأموریت روزانه تکمیل شد' : 'مأموریت تکمیل شد',
       xp: entry.rewards.xp,
     });
   }
@@ -40,7 +41,7 @@ export function buildActivity(progress: PlayerProgress, quests: WeeklyQuests | n
       kind: 'quest',
       at: quest.claimedAt,
       title: quest.title,
-      detail: 'Weekly quest claimed · DEMO',
+      detail: 'چالش هفتگی دریافت شد · نمایشی',
       xp: quest.rewardXp,
     });
   }
@@ -53,7 +54,7 @@ export function buildActivity(progress: PlayerProgress, quests: WeeklyQuests | n
       kind: 'achievement',
       at,
       title: achievement.title,
-      detail: 'Achievement unlocked',
+      detail: 'دستاورد جدید',
       xp: null,
     });
   }
@@ -65,5 +66,5 @@ export function buildActivity(progress: PlayerProgress, quests: WeeklyQuests | n
 export function formatWhen(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return jdateTime(iso);
 }

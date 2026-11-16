@@ -27,21 +27,21 @@ export const FLAG_ORDER_RECEIVED = 'order_received';
 export const REWARD_RULES: RewardRule[] = [
   {
     id: 'mission_complete',
-    label: 'Mission complete',
+    label: 'تکمیل مأموریت',
     applies: () => true,
     xp: (ctx) => ctx.mission.xpReward,
     coins: (ctx) => ctx.mission.coinReward,
   },
   {
     id: 'daily_bonus',
-    label: 'Daily challenge bonus',
+    label: 'جایزهٔ مأموریت روزانه',
     applies: (ctx) => ctx.isDaily,
     xp: () => GAME_CONFIG.rewards.dailyBonusXp,
     coins: () => 0,
   },
   {
     id: 'order_bonus',
-    label: 'Order received bonus',
+    label: 'جایزهٔ دریافت سفارش',
     applies: (ctx) => ctx.flags.has(FLAG_ORDER_RECEIVED),
     xp: () => GAME_CONFIG.rewards.orderBonusXp,
     coins: () => 0,
