@@ -122,22 +122,45 @@ export interface RepDetail {
   viewer?: SessionUser;
 }
 
+export type LeaderboardScope = 'individual' | 'team' | 'branch';
+export type LeaderboardWindow = 'season' | 'daily' | 'weekly' | 'monthly';
+export type Movement = 'up' | 'down' | 'same' | 'new' | null;
+
 export interface LeaderboardRow {
   rank: number;
-  user_id: string;
+  /** Rank in the previous window of the same length; null when there was no ranked activity. */
+  previous_rank: number | null;
+  movement: Movement;
+  /** Places moved (absolute), when movement is up or down. */
+  places: number | null;
+  id: string;
+  /** Set for individual rows only. */
+  user_id: string | null;
   name: string;
+  subtitle: string;
   employee_code: string | null;
   branch_code: string | null;
+  branch_name: string | null;
+  members: number;
+  /** Sales ranking points (append-only ledger). Never mixed with game XP. */
   org_points: number;
+  /** Game XP (missions and quests). Shown separately from org points. */
   game_xp: number;
-  level: number;
+  level: number | null;
   is_me: boolean;
+  in_my_group: boolean;
 }
 
 export interface Leaderboard {
   is_demo: boolean;
+  scope: LeaderboardScope;
+  window: LeaderboardWindow;
+  window_label: string;
+  period: { start: string; end: string; previous_start: string; previous_end: string } | null;
   competition: { title: string; starts_at: string; ends_at: string; is_sample: boolean } | null;
   rows: LeaderboardRow[];
+  me: LeaderboardRow | null;
+  totals: { groups: number; org_points: number; game_xp: number };
   note: string;
 }
 

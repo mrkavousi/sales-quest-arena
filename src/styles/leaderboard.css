@@ -1,0 +1,176 @@
+/* ---------- Ranking (players and managers): scope and window, podium, movement ---------- */
+
+.lb-card {
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+.lb-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.lb-head h2 { margin: 0; font-size: 22px; color: var(--ink); }
+.lb-sub { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lb-sample {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #6b4b00;
+  background: var(--yellow-soft);
+  border: 2px solid var(--yellow);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* Scope and window segments */
+.lb-controls { display: grid; gap: 10px; }
+.lb-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.lb-seg button {
+  border: 0;
+  border-radius: 12px;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-2);
+  background: transparent;
+  cursor: pointer;
+  min-width: 0;
+}
+.lb-seg button:hover { color: var(--ink); }
+.lb-seg button.is-on { background: var(--primary); color: #fff; box-shadow: 0 3px 0 var(--indigo-700); }
+.lb-seg--window button { font-size: 13px; padding: 8px 6px; }
+
+/* Your position */
+.lb-me {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--primary), var(--indigo-700));
+  color: #fff;
+}
+.lb-me__label { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.9; }
+.lb-me__rank { font-size: 28px; font-weight: 900; line-height: 1; }
+.lb-me__org, .lb-me__xp { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.lb-me__org b, .lb-me__xp b { font-size: 17px; }
+.lb-me .lb-move { justify-self: end; }
+.lb-me .lb-move--none { display: none; }
+
+/* Podium */
+.lb-podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.lb-step {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 12px 8px 14px;
+  border-radius: 18px 18px 10px 10px;
+  background: linear-gradient(180deg, var(--surface), var(--bg));
+  border: 2px solid var(--line);
+  text-align: center;
+  min-width: 0;
+}
+.lb-step--1 { padding-top: 22px; background: linear-gradient(180deg, #fff3c4, #ffe07a 70%); border-color: var(--yellow); }
+.lb-step--2 { background: linear-gradient(180deg, #f1f3fb, #d9dded 80%); border-color: #b7bdd6; }
+.lb-step--3 { background: linear-gradient(180deg, #ffe9d6, #f6c79b 80%); border-color: #e7a86b; }
+.lb-step--empty { visibility: hidden; }
+.lb-step.is-me { outline: 3px solid var(--primary); outline-offset: 2px; }
+.lb-step__medal { font-size: 26px; line-height: 1; }
+.lb-step__name { font-size: 14px; color: var(--ink); overflow-wrap: anywhere; }
+.lb-step__org { font-size: 12px; color: var(--ink-2); font-weight: 700; }
+.lb-step__org b { font-size: 18px; color: var(--ink); }
+.lb-step__org i { font-style: normal; }
+.lb-step__xp { font-size: 12px; font-weight: 800; color: #8a5a00; }
+
+/* Column head and rows */
+.lb-colhead,
+.lb-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 62px 84px 74px;
+  gap: 8px;
+  align-items: center;
+}
+.lb-colhead { padding: 0 12px; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.lb-num { text-align: end; }
+.lb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lb-row {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  transition: transform 160ms var(--ease-out);
+}
+.lb-row:hover { transform: translateX(-2px); }
+.lb-row.is-me { background: var(--primary-soft); border-color: var(--primary); }
+.lb-rank { font-size: 18px; font-weight: 900; color: var(--ink); }
+.lb-who { min-width: 0; display: grid; gap: 1px; direction: ltr; text-align: left; }
+.lb-name { font-size: 15px; color: var(--ink); overflow-wrap: anywhere; text-align: left; }
+.lb-who small { font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
+.lb-you {
+  justify-self: start;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--primary);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.lb-num b { font-size: 16px; color: var(--ink); }
+.lb-num--xp { font-size: 14px; font-weight: 800; color: #8a5a00; }
+
+/* Movement */
+.lb-move { justify-self: center; font-size: 12px; font-weight: 900; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.lb-move--up { color: #0c6b3b; background: var(--green-soft); }
+.lb-move--down { color: #a8322c; background: #ffe3df; }
+.lb-move--same { color: var(--ink-2); background: var(--line); }
+.lb-move--new { color: #3b2aa8; background: #e4defc; letter-spacing: 0.04em; }
+.lb-move--none { color: var(--ink-3); background: transparent; }
+
+.lb-link { background: none; border: 0; padding: 0; font: inherit; color: var(--primary); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.lb-note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+.lb-state { display: grid; gap: 10px; justify-items: start; padding: 14px; border-radius: var(--radius); background: var(--bg); border: 1px dashed var(--line); }
+.lb-state p { margin: 0; font-size: 14px; color: var(--ink-2); }
+.lb-skeleton { height: 200px; border-radius: var(--radius); background: linear-gradient(90deg, var(--bg), var(--line), var(--bg)); background-size: 200% 100%; animation: lb-shimmer 1.2s linear infinite; }
+.lb-body { display: grid; gap: 14px; transition: opacity 180ms ease; }
+.lb-body.is-loading { opacity: 0.55; }
+
+@keyframes lb-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .lb-skeleton { animation: none; } .lb-row { transition: none; } }
+
+/* Phones: keep the table readable without sideways scrolling. */
+@media (max-width: 560px) {
+  .lb-card { padding: 14px; }
+  .lb-colhead { display: none; }
+  /* Two lines per player: name and movement on top; org points and XP below, both labelled. */
+  .lb-row {
+    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas: 'rank who who move' 'rank org xp xp';
+    row-gap: 6px;
+  }
+  .lb-rank { grid-area: rank; }
+  .lb-who { grid-area: who; }
+  .lb-row > .lb-move { grid-area: move; }
+  .lb-row > .lb-num--org { grid-area: org; text-align: start; }
+  .lb-row > .lb-num--xp { grid-area: xp; text-align: end; }
+  .lb-row > .lb-num--org::before { content: 'Org '; font-size: 11px; font-weight: 800; color: var(--ink-2); }
+  .lb-row > .lb-num--xp::after { content: ' XP'; font-size: 11px; font-weight: 800; color: var(--ink-2); }
+  .lb-me { grid-template-columns: auto 1fr auto; }
+  .lb-step { padding: 10px 6px 12px; }
+  .lb-step--1 { padding-top: 16px; }
+  .lb-step__name { font-size: 13px; }
+}

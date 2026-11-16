@@ -9,6 +9,7 @@ import './styles/pages.css';
 import './styles/play.css';
 import './styles/kiloos.css';
 import './styles/home.css';
+import './styles/leaderboard.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
