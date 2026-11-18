@@ -42,6 +42,12 @@ export function MissionCard({ mission, onSelect, index = 0 }: MissionCardProps) 
         <span className="mcard__title">{mission.title}</span>
         <span className="mcard__desc">{locked ? mission.lockReason : mission.description}</span>
         {mission.status === 'in_progress' && <ProgressBar value={Math.max(0.08, mission.draftProgress)} tone="yellow" size="sm" label={t('common.missionProgress')} />}
+        {mission.source === 'server' && (
+          <span className="mcard__server">
+            <span className="orgchip" title={t('server.orgPointsHint')}>{t('server.orgPoints')}: <bdi dir="ltr">{n(mission.orgPoints ?? 0)}</bdi></span>
+            {mission.maxPerUser ? <span className="mcard__remaining">{t('server.remaining', { remaining: mission.remaining ?? 0, max: mission.maxPerUser })}</span> : null}
+          </span>
+        )}
         <span className="mcard__foot">
           <span className="mcard__stat"><Icon name="clock" size={14} />{t('missions.minutes', { minutes: mission.estimatedMinutes })}</span>
           <DifficultyDots difficulty={mission.difficulty} />

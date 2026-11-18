@@ -1,5 +1,6 @@
-import type { CSSProperties } from 'react';
-import type { AnswerValue, ChoiceStep, MissionStep as Step, NoteStep, RatingStep } from '../../game/types';
+import { useEffect, useState, type CSSProperties } from 'react';
+import { checkEvidenceFile } from '../../api/image';
+import type { AnswerValue, ChoiceStep, EvidenceStep, MissionStep as Step, NoteStep, RatingStep } from '../../game/types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { Icon, StarIcon } from '../ui/Icon';
 import { buzz } from '../ui/motion';
@@ -124,8 +125,52 @@ function NoteStepView({ step, value, onChange }: StepProps<NoteStep>) {
   );
 }
 
+/* ---------- Evidence (image) ---------- */
+
+/** The chosen file stays in the play screen; only its name is stored as the step "answer". */
+export interface EvidenceControl {
+  file: File | null;
+  onFile: (file: File | null) => void;
+}
+
+function EvidenceStepView({ step, value, onChange, evidence }: StepProps<EvidenceStep> & { evidence?: EvidenceControl }) {
+  const { t } = useLanguage();
+  const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const file = evidence?.file ?? null;
+  useEffect(() => {
+    if (!file) { setPreview(null); return undefined; }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const pick = (picked: File | undefined) => {
+    if (!picked) return;
+    const check = checkEvidenceFile(picked);
+    if (check !== 'ok') { setError(t(check === 'tooLarge' ? 'server.evidence.tooLarge' : 'server.evidence.badType')); return; }
+    setError(null);
+    evidence?.onFile(picked);
+    onChange(picked.name);
+  };
+
+  return (
+    <div className="evidence">
+      {preview && <img className="evidence__preview" src={preview} alt={t('server.evidence.preview')} />}
+      {typeof value === 'string' && value && <p className="evidence__name"><bdi dir="ltr">{value}</bdi></p>}
+      <label className="btn btn--yellow btn--block evidence__pick">
+        {t(file ? 'server.evidence.replace' : 'server.evidence.choose')}
+        <input className="evidence__input" type="file" accept="image/*" aria-label={step.question} onChange={(event) => { pick(event.target.files?.[0]); event.target.value = ''; }} />
+      </label>
+      {file && <button type="button" className="linkbtn linkbtn--danger" onClick={() => { evidence?.onFile(null); onChange(''); }}>{t('server.evidence.remove')}</button>}
+      {step.required && !file && <p className="evidence__hint">{t('server.evidence.required')}</p>}
+      {error && <p className="evidence__error" role="alert">{error}</p>}
+    </div>
+  );
+}
+
 /** Renders any mission step from its definition. New step types plug in here. */
-export function MissionStep({ step, value, onChange }: StepProps<Step>) {
+export function MissionStep({ step, value, onChange, evidence }: StepProps<Step> & { evidence?: EvidenceControl }) {
   switch (step.type) {
     case 'choice':
       return <ChoiceStepView step={step} value={value} onChange={onChange} />;
@@ -133,5 +178,7 @@ export function MissionStep({ step, value, onChange }: StepProps<Step>) {
       return <RatingStepView step={step} value={value} onChange={onChange} />;
     case 'note':
       return <NoteStepView step={step} value={value} onChange={onChange} />;
+    case 'evidence':
+      return <EvidenceStepView step={step} value={value} onChange={onChange} evidence={evidence} />;
   }
 }

@@ -1,11 +1,14 @@
 import type { AchievementMeta } from '../game/achievements';
 import type { GameConfig } from '../game/config';
 import type { CategoryMeta } from '../game/missions';
-import type { Answers, AvatarId, HistoryEntry, MissionCategory, MissionDifficulty, MissionView, PlayerProgress } from '../game/types';
+import type { Answers, AvatarId, HistoryEntry, MissionCategory, MissionDifficulty, MissionView, PlayerProgress, SubmissionSummary } from '../game/types';
 
 /** This client intentionally uses only same-origin paths and never handles a session token. */
 const ROOT = '/api/v1/game';
 export const SUPPORTED_API_VERSION = '1';
+/** v2 serves missions from the Kiloos database. v1 (catalog missions) is still accepted while a backend deploy catches up. */
+export const PREFERRED_API_VERSION = '2';
+export const SUPPORTED_API_VERSIONS = ['1', '2'];
 export const SUPPORTED_CONTENT_VERSION = 'sales-quest-arena-7de8a5a0a0da';
 
 export interface GameBootstrap {
@@ -31,6 +34,12 @@ export interface Projection {
 
 export interface Completion extends Projection {
   entry: HistoryEntry;
+  date_key: string;
+}
+
+export interface SubmissionResult extends Projection {
+  submission: { id: string; missionId: string; status: SubmissionSummary['status']; submittedAt: string };
+  mission: MissionView | null;
   date_key: string;
 }
 
@@ -91,21 +100,24 @@ function validMission(value: unknown): boolean {
       !number(value.estimatedMinutes) || !number(value.xpReward) || !number(value.coinReward) || !object(value.unlock) ||
       !optionalString(value.unlock.afterMission) || !(value.unlock.minLevel === undefined || nonnegativeInteger(value.unlock.minLevel)) ||
       !object(value.completion) || !stringList(value.completion.requiredSteps) || !Array.isArray(value.steps) || !value.steps.length ||
-      !['locked', 'available', 'in_progress', 'completed'].includes(String(value.status)) || !number(value.completions) ||
+      !['locked', 'available', 'in_progress', 'completed', 'pending_review', 'approved', 'rejected', 'expired'].includes(String(value.status)) || !number(value.completions) ||
       !(value.bestRating === null || number(value.bestRating)) || !nullableString(value.lockReason) || !number(value.draftProgress) ||
       typeof value.isDaily !== 'boolean' || typeof value.dailyDone !== 'boolean') return false;
+  if (value.source !== undefined && !(value.source === 'server' && number(value.orgPoints) && number(value.remaining) && number(value.maxPerUser) &&
+      typeof value.requiresReview === 'boolean' && typeof value.requiresEvidence === 'boolean' && typeof value.canStart === 'boolean')) return false;
   return value.steps.every((step: unknown) => {
     if (!object(step) || !string(step.id) || !string(step.label) || !string(step.question) || !optionalString(step.helper)) return false;
     if (step.type === 'choice') return Array.isArray(step.options) && step.options.length > 0 && step.options.every((option: unknown) =>
       object(option) && string(option.id) && string(option.label) && typeof option.emoji === 'string' && optionalString(option.hint) && optionalStringList(option.flags));
     if (step.type === 'rating') return stringList(step.scale) && step.scale.length === 5;
     if (step.type === 'note') return typeof step.placeholder === 'string' && nonnegativeInteger(step.maxLength) && optionalStringList(step.suggestions);
+    if (step.type === 'evidence') return typeof step.required === 'boolean';
     return false;
   });
 }
 
 function validateProjection(value: unknown, needsDate = false): Projection {
-  if (!object(value) || !validProgress(value.progress) || !Array.isArray(value.missions) || !value.missions.length || !value.missions.every(validMission) || (needsDate && !dateKey(value.date_key)) || ('date_key' in value && !dateKey(value.date_key))) {
+  if (!object(value) || !validProgress(value.progress) || !Array.isArray(value.missions) || !value.missions.every(validMission) || (needsDate && !dateKey(value.date_key)) || ('date_key' in value && !dateKey(value.date_key))) {
     throw new GameApiError(0, 'INVALID_RESPONSE', 'The game progress response is invalid.');
   }
   return value as unknown as Projection;
@@ -113,7 +125,7 @@ function validateProjection(value: unknown, needsDate = false): Projection {
 
 function validateBootstrap(value: unknown): GameBootstrap {
   if (!object(value)) throw new GameApiError(0, 'INVALID_RESPONSE', 'Expected a game bootstrap object.');
-  if (value.api_version !== SUPPORTED_API_VERSION || value.content_version !== SUPPORTED_CONTENT_VERSION) {
+  if (!SUPPORTED_API_VERSIONS.includes(String(value.api_version)) || value.content_version !== SUPPORTED_CONTENT_VERSION) {
     throw new GameApiError(0, 'UNSUPPORTED_VERSION', 'The game API or content version is not supported by this app.');
   }
   const player = value.player;
@@ -129,7 +141,7 @@ function validateBootstrap(value: unknown): GameBootstrap {
       !object(config.history) || !number(config.history.maxEntries) ||
       !object(categories) || !categoriesSupported.every((category) => object(categories[category]) && string(categories[category].label) && string(categories[category].color) && string(categories[category].dark) && string(categories[category].soft)) ||
       !object(difficulty) || !difficultiesSupported.every((item) => object(difficulty[item]) && string(difficulty[item].label) && number(difficulty[item].dots)) ||
-      !Array.isArray(value.missions) || !value.missions.length || !value.missions.every(validMission) ||
+      !Array.isArray(value.missions) || !value.missions.every(validMission) ||
       !Array.isArray(value.achievements_catalog) || !value.achievements_catalog.every((item: unknown) => object(item) && string(item.id) && string(item.title) && string(item.description) && string(item.emoji) && stringList(item.colors) && item.colors.length === 2) ||
       !validProgress(progress)) {
     throw new GameApiError(0, 'INVALID_RESPONSE', 'The game bootstrap is incomplete or invalid.');
@@ -137,11 +149,13 @@ function validateBootstrap(value: unknown): GameBootstrap {
   return value as unknown as GameBootstrap;
 }
 
-async function request<T>(path: string, options: RequestInit, read: (response: Response) => Promise<T>): Promise<T> {
+async function request<T>(path: string, options: RequestInit, read: (response: Response) => Promise<T>, timeoutMs = 15_000): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15_000);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(path, { redirect: 'error', ...options, credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+    // Ask for the v2 contract; a v1-only backend ignores the header and answers with v1.
+    const headers = { 'X-Game-Api': PREFERRED_API_VERSION, ...(options.headers as Record<string, string> | undefined) };
+    const response = await fetch(path, { redirect: 'error', ...options, headers, credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
     // Keep the timeout active until the body is consumed, not just until the
     // headers arrive. A stalled body is an ambiguous network failure.
     return await read(response);
@@ -220,6 +234,28 @@ export async function postCompletion(csrf: string, missionId: string, answers: A
     // an unknown projection may be a stale replay and must not replace totals.
     return { completion: data as unknown as Completion, replayed: replay === 'true' ? true : replay === 'false' ? false : null };
   });
+}
+
+/**
+ * Submit a DB mission (API v2): multipart text answer + optional image, one Idempotency-Key per attempt.
+ * No Content-Type header is set so the browser adds the multipart boundary.
+ */
+export async function postSubmission(csrf: string, missionId: string, answer: string, evidence: File | null, key: string): Promise<{ result: SubmissionResult; replayed: boolean | null }> {
+  const form = new FormData();
+  form.set('answer', answer);
+  if (evidence) form.set('evidence', evidence, evidence.name);
+  return request(`${ROOT}/missions/${encodeURIComponent(missionId)}/submissions`, {
+    method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-Token': csrf, 'Idempotency-Key': key }, body: form,
+  }, async (response) => {
+    const data = await readJson<unknown>(response);
+    validateProjection(data, true);
+    const submission = object(data) ? data.submission : null;
+    if (!object(submission) || !string(submission.id) || submission.missionId !== missionId || !['submitted', 'approved', 'rejected'].includes(String(submission.status)) || !string(submission.submittedAt)) {
+      throw new GameApiError(0, 'INVALID_RESPONSE', 'The submission response is invalid.');
+    }
+    const replay = response.headers.get('Idempotent-Replay');
+    return { result: data as unknown as SubmissionResult, replayed: replay === 'true' ? true : replay === 'false' ? false : null };
+  }, 60_000);
 }
 
 /**

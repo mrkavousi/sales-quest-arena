@@ -376,6 +376,9 @@ export function isStepAnswered(step: MissionStep, answers: Answers): boolean {
       return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 5;
     case 'note':
       return typeof value === 'string' && value.trim().length > 0;
+    case 'evidence':
+      // The marker is the chosen file name; the file itself is held by the play screen.
+      return typeof value === 'string' && value.length > 0;
   }
 }
 

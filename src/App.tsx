@@ -3,7 +3,7 @@ import { PwaUpdateNotice } from './components/PwaUpdateNotice';
 import { ArenaPage } from './pages/ArenaPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { MissionsPage } from './pages/MissionsPage';
-import { PlayPage, ResultPage, SpecialResultPage } from './pages/PlayPage';
+import { PlayPage, ResultPage, SpecialResultPage, SubmittedPage } from './pages/PlayPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StorePage } from './pages/StorePage';
 import { WelcomePage } from './pages/WelcomePage';
@@ -20,6 +20,7 @@ function Screens() {
   if (route.name === 'play') return <PlayPage key={route.param} missionId={route.param} />;
   if (route.name === 'result') return <ResultPage key={route.param} entryId={route.param} />;
   if (route.name === 'result-special') return <SpecialResultPage key={route.param} entryId={route.param} />;
+  if (route.name === 'submitted') return <SubmittedPage key={route.param} missionId={route.param} />;
 
   return (
     <AppLayout route={route.name}>

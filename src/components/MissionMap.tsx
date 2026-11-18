@@ -36,7 +36,7 @@ export function MissionMap({ missions, activeId, onSelect }: MissionMapProps) {
   const done = missions.filter((m) => m.completions > 0).length;
   const chestY = nodeY(missions.length - 1) + ROW_H - 6;
   const height = chestY + 130;
-  const allDone = done === missions.length;
+  const allDone = missions.length > 0 && done === missions.length;
 
   return (
     <section className="map" aria-label={t('map.label')}>

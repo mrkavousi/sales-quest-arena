@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { categoryLabel } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
+import { blockedKey } from '../game/serverMissions';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 import { MissionArt } from './art/MissionArt';
@@ -57,6 +58,12 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
           </div>
           <h2 className="detail__title">{mission.title}</h2>
           <p className="detail__desc">{mission.description}</p>
+          {mission.source === 'server' && mission.instructions && (
+            <div className="detail__instructions">
+              <h3>{t('server.instructions')}</h3>
+              <p>{mission.instructions}</p>
+            </div>
+          )}
 
           <div className="detail__facts">
             <span><Icon name="clock" size={16} />{t('missions.aboutMinutes', { minutes: mission.estimatedMinutes })}</span>
@@ -74,6 +81,17 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
               <div><b><bdi dir="ltr">+{n(mission.coinReward)}</bdi></b><span>{t('common.coins')}</span></div>
             </div>
           </div>
+          {mission.source === 'server' && (
+            <div className="detail__org">
+              <span className="orgchip">{t('server.orgPoints')}: <b><bdi dir="ltr">{n(mission.orgPoints ?? 0)}</bdi></b></span>
+              <p>{t('server.orgPointsHint')}</p>
+              {mission.requiresReview && <p>{t('server.requiresReview')}</p>}
+              {mission.maxPerUser ? <p>{t('server.remaining', { remaining: mission.remaining ?? 0, max: mission.maxPerUser })}</p> : null}
+              {mission.latestSubmission?.status === 'rejected' && mission.latestSubmission.rejectionReason && (
+                <p className="detail__rejected" role="status">{t('server.rejectedReason', { reason: mission.latestSubmission.rejectionReason })}</p>
+              )}
+            </div>
+          )}
           {dailyBonus && (
             <p className="detail__hint">
               <span aria-hidden="true">☀️</span> {t('detail.dailyHint', { xp: config.rewards.dailyBonusXp })}
@@ -96,6 +114,11 @@ export function MissionDetail({ missionId, onClose }: MissionDetailProps) {
             <div className="detail__locked">
               <Icon name="lock" size={18} />
               {mission.lockReason}
+            </div>
+          ) : mission.canStart === false ? (
+            <div className="detail__locked">
+              <Icon name="clock" size={18} />
+              {t(blockedKey(mission))}
             </div>
           ) : (
             <button className="btn btn--green btn--block btn--lg detail__cta" onClick={start}>

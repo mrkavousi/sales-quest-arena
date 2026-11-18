@@ -6,6 +6,7 @@ import { Icon, StarIcon, type IconName } from './ui/Icon';
 
 const STATUS_ICONS: Record<MissionStatus, IconName | null> = {
   locked: 'lock', available: null, in_progress: 'play', completed: 'check',
+  pending_review: 'clock', approved: 'check', rejected: 'close', expired: 'clock',
 };
 
 export function StatusPill({ status }: { status: MissionStatus }) {

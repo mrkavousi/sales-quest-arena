@@ -33,13 +33,14 @@ function moodFor(mission: Mission, index: number, answers: Answers): MascotMood 
 }
 
 export function MissionGameplay({ mission }: { mission: Mission }) {
-  const { progress, mode, categories, persistence, sessionChanged, contractError, saveDraft, flushDraft, discardDraft, finishMission } = useGame();
+  const { progress, mode, categories, persistence, sessionChanged, contractError, saveDraft, flushDraft, discardDraft, finishMission, submitMission } = useGame();
   const { t, n } = useLanguage();
   const [answers, setAnswers] = useState<Answers>(() => progress.drafts[mission.id]?.answers ?? {});
   const [index, setIndex] = useState(() => resumeIndex(mission, progress.drafts[mission.id]));
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd');
   const [pauseOpen, setPauseOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const actionLock = useRef(false);
 
   const meta = categories[mission.category];
@@ -72,13 +73,20 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
     if (actionLock.current) return;
     actionLock.current = true;
     setFinishing(true);
+    if (mission.source === 'server') {
+      // DB mission: goes to the operator review queue; rewards are granted only after approval.
+      void submitMission(mission.id, answers, file).then((outcome) => {
+        if (outcome.ok) navigate(`/submitted/${mission.id}`, { replace: true });
+      }).finally(() => { actionLock.current = false; setFinishing(false); });
+      return;
+    }
     const special = isSpecialMissionId(mission.id);
     void finishMission(mission.id, answers).then((entry) => {
       // Purchased demo-store missions use their own result route because they are
       // outside the six-mission catalog that `/result` resolves against.
       if (entry) navigate(`${special ? '/result-special' : '/result'}/${entry.id}`, { replace: true });
     }).finally(() => { actionLock.current = false; setFinishing(false); });
-  }, [answers, canContinue, finishMission, index, isLast, mission.id, saveDraft]);
+  }, [answers, canContinue, file, finishMission, index, isLast, mission.id, mission.source, saveDraft, submitMission]);
 
   const goBack = useCallback(() => {
     if (index === 0 || actionLock.current) return;
@@ -105,7 +113,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, pauseOpen, setAnswer, step]);
 
-  const cta = t(isLast ? 'play.complete' : step.type === 'note' && !answered ? 'play.skip' : 'common.continue');
+  const cta = t(isLast ? (mission.source === 'server' ? 'server.submit' : 'play.complete') : step.type === 'note' && !answered ? 'play.skip' : 'common.continue');
 
   return (
     <div className="play" style={{ '--c': meta.color, '--d': meta.dark, '--soft': meta.soft } as CSSProperties}>
@@ -145,7 +153,7 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
             </div>
           </div>
           <div className={finishing ? 'play__answers is-busy' : 'play__answers'} aria-disabled={finishing}>
-            <MissionStep step={step} value={answers[step.id]} onChange={setAnswer} />
+            <MissionStep step={step} value={answers[step.id]} onChange={setAnswer} evidence={{ file, onFile: setFile }} />
           </div>
         </main>
 

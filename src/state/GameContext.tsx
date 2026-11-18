@@ -1,3 +1,4 @@
+import type { SubmitOutcome } from './GameShared';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ACHIEVEMENTS } from '../game/achievements';
 import { completeMission, MissionError } from '../game/completeMission';
@@ -131,6 +132,8 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
     }
   }, [commit, toast, t]);
 
+  const submitMission = useCallback(async (): Promise<SubmitOutcome> => ({ ok: false, error: 'unavailable' }), []);
+
   /**
    * Device-only demo purchase, written before it is adopted: the verified save
    * must contain the debited balance and the offer id, otherwise nothing changes
@@ -170,10 +173,10 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
     mode: 'local', switchMode, account: null, changeAccount: () => {}, signOut: async () => false, progress, todayKey, serverClockOffset: 0,
     missions, config: GAME_CONFIG, categories: CATEGORIES, difficulty: DIFFICULTY, achievements: ACHIEVEMENTS,
     level: getLevelInfo(progress.xp), stats: getPlayerStats(progress, todayKey), persistence, sessionChanged: false, contractError: null, toasts, toast,
-    completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, resetProgress,
+    completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, resetProgress,
     store, buyOffer,
     lastResult: null, refresh, loadHistory,
-  }), [switchMode, progress, todayKey, missions, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, resetProgress, store, buyOffer, refresh, loadHistory]);
+  }), [switchMode, progress, todayKey, missions, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, resetProgress, store, buyOffer, refresh, loadHistory]);
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }

@@ -10,7 +10,8 @@ export type MissionCategory =
 
 export type MissionDifficulty = 'easy' | 'medium' | 'hard';
 
-export type MissionStatus = 'locked' | 'available' | 'in_progress' | 'completed';
+/** `pending_review` / `approved` / `rejected` / `expired` only come from DB missions (API v2). */
+export type MissionStatus = 'locked' | 'available' | 'in_progress' | 'completed' | 'pending_review' | 'approved' | 'rejected' | 'expired';
 
 export type AvatarId = 'fox' | 'bear' | 'cat' | 'bunny' | 'panda' | 'frog';
 
@@ -51,7 +52,13 @@ export interface NoteStep extends StepBase {
   suggestions?: string[];
 }
 
-export type MissionStep = ChoiceStep | RatingStep | NoteStep;
+/** Image evidence. The file itself lives in the player's tab and is uploaded with the submission. */
+export interface EvidenceStep extends StepBase {
+  type: 'evidence';
+  required: boolean;
+}
+
+export type MissionStep = ChoiceStep | RatingStep | NoteStep | EvidenceStep;
 
 export type AnswerValue = string | number;
 export type Answers = Record<string, AnswerValue>;
@@ -86,6 +93,26 @@ export interface Mission {
   unlock: MissionUnlockRule;
   completion: MissionCompletionConditions;
   steps: MissionStep[];
+  /** Set only for missions served from the Kiloos database (API v2). */
+  source?: 'server';
+  instructions?: string;
+  /** Organizational points: recorded in the Kiloos score ledger, never mixed with XP/coins. */
+  orgPoints?: number;
+  requiresReview?: boolean;
+  requiresEvidence?: boolean;
+  maxPerUser?: number;
+  remaining?: number;
+  endsAt?: string;
+}
+
+export type MissionBlockedReason = 'pending_review' | 'expired' | 'limit_reached';
+
+export interface SubmissionSummary {
+  id: string;
+  status: 'submitted' | 'approved' | 'rejected';
+  rejectionReason: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
 }
 
 /** Mission definition + the current player's state for it. */
@@ -99,6 +126,10 @@ export interface MissionView extends Mission {
   draftProgress: number;
   isDaily: boolean;
   dailyDone: boolean;
+  /** DB missions only: false when the server will refuse a new start. */
+  canStart?: boolean;
+  blockedReason?: MissionBlockedReason | null;
+  latestSubmission?: SubmissionSummary | null;
 }
 
 /* ---------- Rewards ---------- */

@@ -26,6 +26,10 @@ export type PurchaseOutcome =
   | { ok: true; result: PurchaseResult }
   | { ok: false; error: 'unknown_offer' | 'already_purchased' | 'insufficient_coins' | 'unavailable' | 'save_failed' };
 
+export type SubmitOutcome =
+  | { ok: true; status: 'submitted' | 'approved' | 'rejected' }
+  | { ok: false; error: 'busy' | 'unavailable' | 'failed' };
+
 export interface ToastMessage {
   id: number;
   text: string;
@@ -62,6 +66,8 @@ export interface GameContextValue {
   flushDraft: () => Promise<boolean>;
   discardDraft: (missionId: string, stepIndex: number, answers: Answers) => Promise<boolean>;
   finishMission: (missionId: string, answers: Answers) => Promise<HistoryEntry | null>;
+  /** Server mode only: submit a DB mission (text answer + optional image) for operator review. */
+  submitMission: (missionId: string, answers: Answers, evidence: File | null) => Promise<SubmitOutcome>;
   resetProgress: () => void;
   /** Demo store: device-only purchases, or an explicit "not connected" in server mode. */
   store: StoreView;

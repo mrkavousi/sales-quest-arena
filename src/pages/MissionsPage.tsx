@@ -7,7 +7,7 @@ import type { MissionCategory, MissionStatus } from '../game/types';
 import { useGame } from '../state/GameContext';
 
 type Filter = 'all' | MissionCategory;
-const ORDER: Record<MissionStatus, number> = { in_progress: 0, available: 1, completed: 2, locked: 3 };
+const ORDER: Record<MissionStatus, number> = { in_progress: 0, rejected: 1, available: 2, pending_review: 3, approved: 4, completed: 5, expired: 6, locked: 7 };
 
 export function MissionsPage() {
   const { missions, categories: categoryMeta } = useGame();
@@ -41,6 +41,13 @@ export function MissionsPage() {
           </button>
         ))}
       </div>
+
+      {missions.length === 0 && (
+        <div className="empty-missions" role="status">
+          <h2>{t('server.empty.title')}</h2>
+          <p>{t('server.empty.body')}</p>
+        </div>
+      )}
 
       <div className="mcards" key={filter}>
         {visible.map((m, i) => (

@@ -6,11 +6,13 @@ import { PlayerHeader } from '../components/PlayerHeader';
 import { PlayerProgress } from '../components/PlayerProgress';
 import { StoreEntry } from '../components/StoreEntry';
 import { getActiveMissionId } from '../game/progress';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useGame } from '../state/GameContext';
 
 /** The game home: HUD, daily challenge, mission island and progress. */
 export function ArenaPage() {
   const { missions } = useGame();
+  const { t } = useLanguage();
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
@@ -21,7 +23,9 @@ export function ArenaPage() {
           <DailyChallenge onOpen={setSelected} />
         </div>
         <div className="arena__map">
-          <MissionMap missions={missions} activeId={getActiveMissionId(missions)} onSelect={setSelected} />
+          {missions.length > 0
+            ? <MissionMap missions={missions} activeId={getActiveMissionId(missions)} onSelect={setSelected} />
+            : <div className="empty-missions" role="status"><h2>{t('server.empty.title')}</h2><p>{t('server.empty.body')}</p></div>}
         </div>
         <div className="arena__store">
           <StoreEntry />

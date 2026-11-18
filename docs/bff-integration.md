@@ -2,8 +2,9 @@
 
 This frontend integrates with `iciiex/comu-center` at backend commit
 `0bd8707933c4d5acd79edd92a91822e320978e69` (PR #11), which adds the JSON demo
-login routes. It accepts API version
-`1` and content version `sales-quest-arena-7de8a5a0a0da`. The server's six-mission
+login routes (unified missions need backend branch `arena/demo-sprint`, migration `0007`). It accepts API
+versions `1` and `2` and content version `sales-quest-arena-7de8a5a0a0da`; every request sends `X-Game-Api: 2`, and a
+v1-only backend simply answers with the v1 catalog contract. The server's six-mission
 catalog, categories, difficulty, reward configuration, levels, achievements, mission
 views and `date_key` are used in server mode. Translations are display-only and
 keyed by stable IDs. A different API or content version is rejected with a clear
@@ -15,10 +16,26 @@ cannot be completely prevented by the client; coordinate backend/client releases
 
 **This is a technical integration proposal, not an approved business policy.**
 Game XP and coins are sample values, distinct from the backend's organizational
-`score_events`/wallet. The six game missions are not the admin-panel mission model.
-Game completion accepts self-reported answers, validates and awards immediately;
-there is no photo evidence, operator approval, pending/rejected state, or verified
-CRM sale in this flow.
+`score_events`/wallet. With API v2 the missions shown in server mode are the admin panel's
+missions (one source of truth in the backend database, D-009 PROPOSED); the six catalog
+missions are only used by device-only mode and by a v1 backend.
+
+## Unified missions (API v2)
+
+- The mission list comes from `bootstrap.missions`: title, description, instructions, category, difficulty,
+  minutes, `xpReward`/`coinReward` (game economy), `orgPoints` (organizational score, shown as a separate
+  «امتیاز سازمانی» chip), `remaining`/`maxPerUser`, and a server status:
+  `available | in_progress | pending_review | approved | rejected | expired` plus `canStart`/`blockedReason`.
+- A mission has an `answer` text step and an `evidence` image step. The image stays in the play screen (never in
+  drafts or localStorage), is downscaled client-side (≤ 1600 px JPEG) and sent with the text as
+  `multipart/form-data` to `POST /api/v1/game/missions/{id}/submissions` with one `Idempotency-Key` per attempt.
+  The key survives an ambiguous failure, so a retry cannot create a second submission.
+- Review-required missions show «در انتظار بررسی» and no XP/coins. After an operator approves, the next refresh
+  (focus, online, 60 s, or reload) shows «تأیید شد», and XP/coins arrive from the server projection.
+- No daily challenge or unreachable achievements in server mode (`progress.daily` is `null`,
+  `achievements_catalog[].available === false` entries are hidden).
+- Cross-repository check: `SQA_BACKEND_DIR=../comu-center SQA_BACKEND_PYTHON=../comu-center/.venv/bin/python npm run test:bff`
+  creates a mission through the admin panel, plays it in Chromium, approves it as an operator and asserts both ledgers.
 
 ## Run against a local demo backend
 

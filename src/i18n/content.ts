@@ -361,6 +361,8 @@ function localizeStep(step: MissionStep, copy: StepCopy | undefined): MissionSte
       return { ...step, ...base, type: 'rating', scale: copy.scale ?? step.scale };
     case 'note':
       return { ...step, ...base, type: 'note', placeholder: copy.placeholder ?? step.placeholder, suggestions: copy.suggestions ?? step.suggestions };
+    case 'evidence':
+      return step;
   }
 }
 

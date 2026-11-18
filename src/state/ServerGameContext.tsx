@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import * as api from '../api/game';
-import { apiErrorKey, definitelyNotCompleted } from '../api/errors';
+import { apiErrorKey, definitelyNotCompleted, definitelyNotSubmitted } from '../api/errors';
+import { prepareEvidence } from '../api/image';
 import { clearPendingCompletion, loadPendingCompletion, newCompletionKey, savePendingCompletion, type PendingCompletion, type PendingLoad } from '../api/pendingCompletion';
 import { Logo } from '../components/AppLayout';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -8,11 +9,12 @@ import { Mascot } from '../components/art/Mascot';
 import { msUntilServerDayEnds } from '../game/dates';
 import { getLevelInfo } from '../game/levels';
 import { getPlayerStats } from '../game/progress';
+import { blockedKey, withoutLocalOnly } from '../game/serverMissions';
 import type { Answers, AvatarId, HistoryEntry } from '../game/types';
 import { localizeMissionView } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
-import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState, type PurchaseOutcome } from './GameShared';
+import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState, type PurchaseOutcome, type SubmitOutcome } from './GameShared';
 
 interface ProviderProps { children: ReactNode; switchMode: (mode: GameMode) => void }
 
@@ -287,6 +289,7 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
     if (!await ensureCompatible()) return false;
     const mission = snapshotRef.current.missions.find((item) => item.id === missionId);
     if (!mission || mission.status === 'locked') { toast(t('play.locked'), 'warn'); return false; }
+    if (mission.canStart === false) { toast(t(blockedKey(mission)), 'warn'); return false; }
     const stored = loadPendingCompletion(initial.player.id);
     if (stored.status === 'loaded' || stored.status === 'corrupt') { setPending(stored); return false; }
     if (snapshotRef.current.progress.drafts[missionId]) return true;
@@ -337,7 +340,7 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
 
   const saveDraft = useCallback((missionId: string, stepIndex: number, answers: Answers) => {
     if (completing.current) return;
-    draft.current = { missionId, stepIndex, answers: { ...answers } };
+    draft.current = { missionId, stepIndex, answers: withoutLocalOnly(answers) };
     setPersistence('saving');
     if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
     draftTimer.current = window.setTimeout(() => { draftTimer.current = null; void flushDraft(); }, 350);
@@ -349,7 +352,7 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
     if (flushing.current) await flushing.current;
     // Retain the visible answers while checking compatibility, including if a
     // different account has signed in in another tab during that check.
-    const visible = { missionId, stepIndex, answers: { ...answers } };
+    const visible = { missionId, stepIndex, answers: withoutLocalOnly(answers) };
     draft.current = visible;
     if (!await ensureCompatible()) return false;
     draft.current = null;
@@ -442,6 +445,43 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
     } finally { completing.current = false; }
   }, [flushDraft, initial.player.id, sendCompletion, t, toast]);
 
+  // One Idempotency-Key per submit attempt. It is kept after an ambiguous failure so a retry with the
+  // same image cannot create a second submission, and dropped once the server refuses the request.
+  const submitKeys = useRef<Record<string, string>>({});
+  const submitMission = useCallback(async (missionId: string, answers: Answers, evidence: File | null): Promise<SubmitOutcome> => {
+    if (completing.current) return { ok: false, error: 'busy' };
+    completing.current = true;
+    try {
+      if (!await flushDraft()) return { ok: false, error: 'failed' };
+      let key = submitKeys.current[missionId];
+      if (!key) {
+        try { key = newCompletionKey(); } catch { toast(t('connection.pendingStorage'), 'warn'); return { ok: false, error: 'failed' }; }
+        submitKeys.current[missionId] = key;
+      }
+      const answer = typeof answers.answer === 'string' ? answers.answer : '';
+      setPersistence('saving');
+      return await enqueue(async (): Promise<SubmitOutcome> => {
+        requireCompatible();
+        const upload = evidence ? await prepareEvidence(evidence) : null;
+        const { result } = await api.postSubmission(snapshotRef.current.csrf_token, missionId, answer, upload, key);
+        delete submitKeys.current[missionId];
+        let fresh: api.GameBootstrap | null = null;
+        try { fresh = await api.getBootstrap(); } catch (error) {
+          markContractError(error);
+          if (active.current && error instanceof api.GameApiError && (error.status === 401 || error.status === 403)) setSessionChanged(true);
+        }
+        if (!active.current) return { ok: false, error: 'failed' };
+        if (fresh && fresh.player.id !== initial.player.id) { onSessionChanged(fresh); return { ok: false, error: 'failed' }; }
+        if (fresh) { apply(fresh); setPersistence('saved'); } else { applyProjection(result); setPersistence('error'); }
+        return { ok: true, status: result.submission.status };
+      });
+    } catch (error) {
+      if (definitelyNotSubmitted(error)) delete submitKeys.current[missionId];
+      if (active.current) reportError(error);
+      return { ok: false, error: 'failed' };
+    } finally { completing.current = false; }
+  }, [apply, applyProjection, enqueue, flushDraft, initial.player.id, markContractError, onSessionChanged, reportError, requireCompatible, t, toast]);
+
   const loadHistory = useCallback(async (cursor?: string) => {
     try {
       return await enqueue(async () => {
@@ -486,11 +526,13 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
   const value = useMemo<GameContextValue>(() => ({
     mode: 'server', switchMode: safeSwitchMode, account: snapshot.player, changeAccount: safeChangeAccount, signOut,
     progress: snapshot.progress, todayKey: snapshot.date_key, serverClockOffset: clockOffset, missions,
-    config: snapshot.game_config, categories: snapshot.categories, difficulty: snapshot.difficulty, achievements: snapshot.achievements_catalog,
+    config: snapshot.game_config, categories: snapshot.categories, difficulty: snapshot.difficulty,
+    // Achievements the v2 server can no longer award are hidden instead of shown as unreachable.
+    achievements: snapshot.achievements_catalog.filter((item) => item.available !== false),
     level: getLevelInfo(snapshot.progress.xp, snapshot.game_config.levels), stats: getPlayerStats(snapshot.progress, snapshot.date_key),
-    persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission,
+    persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission,
     resetProgress: () => {}, store, buyOffer, lastResult, refresh, loadHistory,
-  }), [safeSwitchMode, snapshot, safeChangeAccount, signOut, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, store, buyOffer, lastResult, refresh, loadHistory]);
+  }), [safeSwitchMode, snapshot, safeChangeAccount, signOut, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, store, buyOffer, lastResult, refresh, loadHistory]);
 
   if (pending.status === 'loaded' || pending.status === 'corrupt') {
     const recover = async () => {

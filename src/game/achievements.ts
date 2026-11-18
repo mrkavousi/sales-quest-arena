@@ -9,6 +9,8 @@ export interface AchievementMeta {
   emoji: string;
   /** Badge colors [light, dark]. */
   colors: [string, string];
+  /** API v2: false for achievements the server can no longer award (hidden in server mode). */
+  available?: boolean;
 }
 
 export interface AchievementDef extends AchievementMeta {
