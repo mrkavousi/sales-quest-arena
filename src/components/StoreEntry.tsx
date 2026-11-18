@@ -3,11 +3,11 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 
-/** Small Arena tile that points at the demo store (device-only mode only). */
+/** Small Arena tile that points at the demo store (device store, or the server store once it has loaded). */
 export function StoreEntry() {
-  const { mode, store, stats } = useGame();
+  const { store, stats } = useGame();
   const { t, n } = useLanguage();
-  const available = mode === 'local' && store.status === 'available';
+  const available = store.status === 'available';
   return (
     <button
       type="button"

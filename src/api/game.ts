@@ -22,6 +22,8 @@ export interface GameBootstrap {
   categories: Record<MissionCategory, CategoryMeta>;
   difficulty: Record<MissionDifficulty, { label: string; dots: number }>;
   missions: MissionView[];
+  /** Demo-store special missions; the locked ones stay hidden until the offer is bought. */
+  special_missions?: MissionView[];
   achievements_catalog: AchievementMeta[];
   progress: PlayerProgress;
 }
@@ -29,6 +31,7 @@ export interface GameBootstrap {
 export interface Projection {
   progress: PlayerProgress;
   missions: MissionView[];
+  special_missions?: MissionView[];
   date_key?: string;
 }
 
@@ -41,6 +44,35 @@ export interface SubmissionResult extends Projection {
   submission: { id: string; missionId: string; status: SubmissionSummary['status']; submittedAt: string };
   mission: MissionView | null;
   date_key: string;
+}
+
+export interface ServerStoreOffer {
+  id: string;
+  title: string;
+  description: string;
+  price_coins: number;
+  mission_id: string;
+  mission_title: string;
+  purchased: boolean;
+}
+
+/** GET /store: the backend is the only source of offers, prices, ownership and the coin balance. */
+export interface ServerStore {
+  store_version: string;
+  is_demo: true;
+  currency: 'game_coins';
+  coin_balance: number;
+  offers: ServerStoreOffer[];
+}
+
+export interface PurchaseReceipt {
+  purchase_id: string;
+  offer_id: string;
+  mission_id: string;
+  price_coins: number;
+  coin_balance: number;
+  purchased_at: string;
+  replayed: boolean;
 }
 
 export interface HistoryPage {
@@ -116,8 +148,10 @@ function validMission(value: unknown): boolean {
   });
 }
 
+const validSpecials = (value: unknown) => value === undefined || (Array.isArray(value) && value.every(validMission));
+
 function validateProjection(value: unknown, needsDate = false): Projection {
-  if (!object(value) || !validProgress(value.progress) || !Array.isArray(value.missions) || !value.missions.every(validMission) || (needsDate && !dateKey(value.date_key)) || ('date_key' in value && !dateKey(value.date_key))) {
+  if (!object(value) || !validProgress(value.progress) || !Array.isArray(value.missions) || !value.missions.every(validMission) || (needsDate && !dateKey(value.date_key)) || ('date_key' in value && !dateKey(value.date_key)) || !validSpecials(value.special_missions)) {
     throw new GameApiError(0, 'INVALID_RESPONSE', 'The game progress response is invalid.');
   }
   return value as unknown as Projection;
@@ -143,7 +177,7 @@ function validateBootstrap(value: unknown): GameBootstrap {
       !object(difficulty) || !difficultiesSupported.every((item) => object(difficulty[item]) && string(difficulty[item].label) && number(difficulty[item].dots)) ||
       !Array.isArray(value.missions) || !value.missions.every(validMission) ||
       !Array.isArray(value.achievements_catalog) || !value.achievements_catalog.every((item: unknown) => object(item) && string(item.id) && string(item.title) && string(item.description) && string(item.emoji) && stringList(item.colors) && item.colors.length === 2) ||
-      !validProgress(progress)) {
+      !validSpecials(value.special_missions) || !validProgress(progress)) {
     throw new GameApiError(0, 'INVALID_RESPONSE', 'The game bootstrap is incomplete or invalid.');
   }
   return value as unknown as GameBootstrap;
@@ -200,6 +234,32 @@ export async function getBootstrap(): Promise<GameBootstrap> {
 
 export async function getProgress(): Promise<Projection> {
   return validateProjection(await jsonRequest<unknown>(`${ROOT}/progress`), true);
+}
+
+function validateStore(value: unknown): ServerStore {
+  if (!object(value) || value.currency !== 'game_coins' || value.is_demo !== true || !string(value.store_version) || !nonnegativeInteger(value.coin_balance) ||
+      !Array.isArray(value.offers) || !value.offers.every((offer: unknown) => object(offer) && string(offer.id) && string(offer.title) && typeof offer.description === 'string' &&
+        nonnegativeInteger(offer.price_coins) && string(offer.mission_id) && string(offer.mission_title) && typeof offer.purchased === 'boolean')) {
+    throw new GameApiError(0, 'INVALID_RESPONSE', 'The store response is invalid.');
+  }
+  return value as unknown as ServerStore;
+}
+
+export async function getStore(): Promise<ServerStore> {
+  return validateStore(await jsonRequest<unknown>(`${ROOT}/store`));
+}
+
+/**
+ * Buy a demo offer with game coins. One Idempotency-Key per attempt: a retry after an ambiguous failure
+ * returns the stored receipt (`replayed: true`) instead of charging again.
+ */
+export async function postPurchase(csrf: string, offerId: string, key: string): Promise<PurchaseReceipt> {
+  const data = await jsonRequest<unknown>(`${ROOT}/store/purchases`, writeOptions('POST', csrf, { offer_id: offerId }, { 'Idempotency-Key': key }));
+  if (!object(data) || !string(data.purchase_id) || data.offer_id !== offerId || !string(data.mission_id) || !nonnegativeInteger(data.price_coins) ||
+      !nonnegativeInteger(data.coin_balance) || !string(data.purchased_at) || typeof data.replayed !== 'boolean') {
+    throw new GameApiError(0, 'INVALID_RESPONSE', 'The purchase response is invalid.');
+  }
+  return data as unknown as PurchaseReceipt;
 }
 
 export async function getHistory(limit = 20, cursor?: string): Promise<HistoryPage> {

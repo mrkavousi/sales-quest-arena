@@ -15,6 +15,9 @@ export function apiErrorKey(error: unknown): MessageKey {
   if (error.status === 403) return 'connection.errorPermission';
   if (error.code === 'MISSION_LOCKED') return 'connection.errorLocked';
   if (error.code === 'IDEMPOTENCY_KEY_REUSED') return 'connection.pendingConflict';
+  if (error.code === 'INSUFFICIENT_GAME_COINS') return 'store.error.insufficient_coins';
+  if (error.code === 'OFFER_ALREADY_PURCHASED') return 'store.error.already_purchased';
+  if (error.code === 'STORE_OFFER_NOT_FOUND') return 'store.error.unknown_offer';
   if (error.code === 'MISSION_EXPIRED') return 'connection.errorExpired';
   if (error.code === 'SUBMISSION_PENDING') return 'connection.errorPending';
   if (error.code === 'MAX_ATTEMPTS_REACHED' || error.code === 'MISSION_NOT_STARTABLE') return 'connection.errorLimit';

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mascot } from '../components/art/Mascot';
 import { CoinIcon, Icon } from '../components/ui/Icon';
 import { Sheet } from '../components/ui/Sheet';
@@ -7,21 +7,30 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { MessageKey } from '../i18n/messages';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
-import { getSpecialMissionViews, type StoreOffer } from '../game/store';
+import type { StoreOffer } from '../game/store';
+
+/** Offers and missions that ship with bundled translations; anything else shows the server's own text. */
+const KNOWN_OFFERS = new Set(['vip-lounge-pass', 'midnight-route-pass', 'special-market-insight', 'special-sales-strategy']);
+const KNOWN_MISSIONS = new Set(['vip-lounge', 'midnight-route', 'market-insight-special', 'sales-strategy-special']);
 
 /**
- * Demo store. Offers are bought with the game's own demo coins and unlock an
- * extra mission on this device. Nothing here is real money, and no purchase is
- * uploaded or treated as server-confirmed.
+ * Demo store, bought with the game's own coins. Never real money and never organizational points.
+ * Device-only mode keeps its purchases in this browser; server mode reads offers, prices, ownership and the
+ * balance from the backend and unlocks the special mission there.
  */
 export function StorePage() {
-  const { mode, store, progress, buyOffer, stats, toast } = useGame();
+  const { mode, store, progress, buyOffer, stats, toast, specialMissions, refreshStore } = useGame();
   const { language, t, n } = useLanguage();
   const [confirming, setConfirming] = useState<StoreOffer | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Server mode: always show what the backend says right now (also after returning to this tab).
+  useEffect(() => { void refreshStore(); }, [refreshStore]);
+
   const purchased = new Set(store.purchased);
-  const unlocked = mode === 'local' ? getSpecialMissionViews(progress) : [];
+  const offerTitle = (offer: StoreOffer) => (KNOWN_OFFERS.has(offer.id) ? t(`store.offer.${offer.id}.title` as MessageKey) : offer.title ?? offer.id);
+  const offerDescription = (offer: StoreOffer) => (KNOWN_OFFERS.has(offer.id) ? t(`store.offer.${offer.id}.description` as MessageKey) : offer.description ?? '');
+  const missionTitle = (offer: StoreOffer) => (KNOWN_MISSIONS.has(offer.missionId) ? t(`mission.${offer.missionId}.title` as MessageKey) : offer.missionTitle ?? offer.missionId);
 
   const buy = async () => {
     if (!confirming || busy) return;
@@ -30,26 +39,32 @@ export function StorePage() {
       const outcome = await buyOffer(confirming.id);
       if (outcome.ok) {
         setConfirming(null);
-        toast(t('store.purchaseToast', { mission: t(`store.offer.${confirming.id}.title` as MessageKey) }), 'success');
+        toast(t('store.purchaseToast', { mission: offerTitle(confirming) }), 'success');
       } else {
         toast(t(`store.error.${outcome.error}` as MessageKey), 'warn');
-        if (outcome.error === 'already_purchased' || outcome.error === 'insufficient_coins') setConfirming(null);
+        if (outcome.error === 'already_purchased' || outcome.error === 'insufficient_coins' || outcome.error === 'unknown_offer') setConfirming(null);
       }
     } finally {
       setBusy(false);
     }
   };
 
+  const badge: MessageKey = store.status === 'loading'
+    ? 'store.loading'
+    : store.status === 'server-unavailable'
+      ? 'store.serverUnavailable'
+      : mode === 'server' ? 'store.serverBadge' : 'store.deviceOnly';
+
   return (
     <div className="pagebody store">
       <header className="pagehead">
         <h1>{t('store.title')}</h1>
-        <p>{t('store.subtitle')}</p>
+        <p>{t(mode === 'server' ? 'store.serverSubtitle' : 'store.subtitle')}</p>
       </header>
 
       <p className={`store-badge store-badge--${store.status}`}>
         <Icon name="box" size={16} />
-        {t(store.status === 'available' ? 'store.deviceOnly' : 'store.serverUnavailable')}
+        {t(badge)}
       </p>
 
       <section className="panel store-wallet" aria-label={t('store.wallet')}>
@@ -60,17 +75,20 @@ export function StorePage() {
             <span>{t('store.balance')}</span>
           </div>
         </div>
-        <p>{t('store.demoCoinsNote')}</p>
+        <p>{t(mode === 'server' ? 'store.serverCoinsNote' : 'store.demoCoinsNote')}</p>
       </section>
 
-      {mode === 'server' ? (
-        <div className="empty store-offline">
-          <Mascot size={110} mood="think" />
-          <h2>{t('store.serverTitle')}</h2>
-          <p>{t('store.serverDescription')}</p>
-          <p className="store-offline__hint">{t('store.serverPlan')}</p>
+      {store.status === 'loading' && <p className="store-empty-note" role="status">{t('store.loading')}</p>}
+
+      {store.status === 'server-unavailable' && (
+        <div className="empty store-offline" role="alert">
+          <Mascot size={110} mood="sad" />
+          <h2>{t('store.loadFailed')}</h2>
+          <button className="btn btn--yellow" onClick={() => void refreshStore()}>{t('store.retry')}</button>
         </div>
-      ) : (
+      )}
+
+      {store.status === 'available' && (
         <>
           <ul className="store-offers">
             {store.offers.map((offer) => {
@@ -83,11 +101,11 @@ export function StorePage() {
                     <span className="offer-card__tag">{t('store.demoTag')}</span>
                   </span>
                   <div className="offer-card__body">
-                    <b className="offer-card__title">{t(`store.offer.${offer.id}.title` as MessageKey)}</b>
-                    <span className="offer-card__desc">{t(`store.offer.${offer.id}.description` as MessageKey)}</span>
+                    <b className="offer-card__title">{offerTitle(offer)}</b>
+                    <span className="offer-card__desc">{offerDescription(offer)}</span>
                     <span className="offer-card__unlock">
                       <Icon name="target" size={14} />
-                      {t('store.unlocksMission', { mission: t(`mission.${offer.missionId}.title` as MessageKey) })}
+                      {t('store.unlocksMission', { mission: missionTitle(offer) })}
                     </span>
                     <div className="offer-card__foot">
                       <span className="offer-card__price">
@@ -122,13 +140,13 @@ export function StorePage() {
           <section className="panel">
             <header className="panel__head">
               <h2>{t('store.unlockedTitle')}</h2>
-              <span className="panel__count"><bdi dir="ltr">{n(unlocked.length)}/{n(store.offers.length)}</bdi></span>
+              <span className="panel__count"><bdi dir="ltr">{n(specialMissions.length)}/{n(store.offers.length)}</bdi></span>
             </header>
-            {unlocked.length === 0 ? (
+            {specialMissions.length === 0 ? (
               <p className="store-empty-note">{t('store.unlockedEmpty')}</p>
             ) : (
               <ul className="store-specials">
-                {unlocked.map((mission) => (
+                {specialMissions.map((mission) => (
                   <li key={mission.id} className="store-specials__item">
                     <span className="store-specials__icon"><Icon name="target" size={20} /></span>
                     <div>
@@ -147,7 +165,7 @@ export function StorePage() {
             )}
           </section>
 
-          <p className="store-fine">{t('store.fine')}</p>
+          <p className="store-fine">{t(mode === 'server' ? 'store.serverFine' : 'store.fine')}</p>
         </>
       )}
 
@@ -158,7 +176,7 @@ export function StorePage() {
             <h2>{t('store.confirmTitle')}</h2>
             <p>{t('store.confirmBody', {
               price: n(confirming.price),
-              mission: t(`store.offer.${confirming.id}.title` as MessageKey),
+              mission: offerTitle(confirming),
             })}</p>
             <p className="store-confirm__after">
               {t('store.confirmAfter', { coins: n(Math.max(0, progress.coins - confirming.price)) })}

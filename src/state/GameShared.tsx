@@ -12,7 +12,7 @@ export type GameMode = 'local' | 'server';
 /** In server mode, saved means acknowledged by the BFF, not stored on the device. */
 export type PersistenceState = 'saved' | 'saving' | 'unavailable' | 'error';
 
-export type StoreStatus = 'available' | 'server-unavailable';
+export type StoreStatus = 'available' | 'server-unavailable' | 'loading';
 
 export interface StoreView {
   /** `server-unavailable` means the BFF has no integrated store yet. */
@@ -23,8 +23,8 @@ export interface StoreView {
 }
 
 export type PurchaseOutcome =
-  | { ok: true; result: PurchaseResult }
-  | { ok: false; error: 'unknown_offer' | 'already_purchased' | 'insufficient_coins' | 'unavailable' | 'save_failed' };
+  | { ok: true; result?: PurchaseResult }
+  | { ok: false; error: 'unknown_offer' | 'already_purchased' | 'insufficient_coins' | 'unavailable' | 'save_failed' | 'server_failed' };
 
 export type SubmitOutcome =
   | { ok: true; status: 'submitted' | 'approved' | 'rejected' }
@@ -72,6 +72,10 @@ export interface GameContextValue {
   /** Demo store: device-only purchases, or an explicit "not connected" in server mode. */
   store: StoreView;
   buyOffer: (offerId: string) => Promise<PurchaseOutcome>;
+  /** Purchased (unlocked) demo-store special missions, from the server in server mode. */
+  specialMissions: MissionView[];
+  /** Server mode: reload offers, ownership and balance from GET /store. */
+  refreshStore: () => Promise<boolean>;
   lastResult: HistoryEntry | null;
   refresh: () => Promise<boolean>;
   loadHistory: (cursor?: string) => Promise<HistoryPage | null>;

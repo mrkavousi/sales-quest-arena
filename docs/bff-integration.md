@@ -151,12 +151,14 @@ cannot secure that backend endpoint.
   reopens the picker and leaves the cookie alone; switching to the device-only game
   never logs out. A pending completion retry record is per account and survives
   sign-out, so signing back in as the same visitor can still recover it.
-- The demo store is device-only for now. Server mode reads no local purchase state and
-  uploads none; it renders the store as not connected. Wiring it up requires
-  `GET /api/v1/game/store` (offers and prices) and `POST /api/v1/game/store/purchases`
-  (server-authorized purchase and entitlement), then replacing the `StoreView` that
-  `ServerGameContext` supplies. Until then, no local purchase may be presented as
-  trusted or server-confirmed.
+- **Demo store.** Device-only mode keeps its own local store (`progress.store`, never uploaded). Server mode uses the
+  backend as the only source of truth: `GET /api/v1/game/store` supplies offers, prices, ownership and the coin balance
+  (re-read on every Store visit), and `POST /api/v1/game/store/purchases` buys an offer with the CSRF token and one
+  `Idempotency-Key` per offer, which is kept after an ambiguous failure so a retry cannot charge twice. After a purchase
+  the client re-reads bootstrap and the store; it never patches the balance itself. The purchased special mission arrives
+  in `bootstrap.special_missions` and is played through the catalog completion route. Prices are game coins only:
+  no real payment, and nothing here touches organizational points. Two offers exist today: Market Insight (40 coins) and
+  Sales Strategy (60 coins); a refused purchase shows «سکهٔ نمایشی کافی…» (insufficient coins) or the already-owned message.
 - History uses the paginated `/history` endpoint. Totals computed from history pages
   are labelled partial while more pages remain (or the history request failed);
   mission counts come from the server's mission records.
@@ -169,8 +171,8 @@ hostname) and sets `VITE_GAME_MODE=server` as the build-time default. Browser co
 still only calls relative same-origin paths; the cookie, `X-CSRF-Token` header and
 `Idempotent-Replay` header pass through the rewrite. The backend hosted environment is
 `KILOOS_ENV=demo`, where the JSON demo login is **visitor-only** and cookies are `Secure`.
-Demo account selection is still not authentication. The store and leaderboard in server
-mode are not connected yet (see "Data, offline behavior and retries").
+Demo account selection is still not authentication. The server-mode store is connected (see "Demo store"
+in "Data, offline behavior and retries"); the leaderboard is not connected yet.
 
 ## Deployment and security
 

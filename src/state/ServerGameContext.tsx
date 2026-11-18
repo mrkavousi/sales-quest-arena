@@ -10,11 +10,12 @@ import { msUntilServerDayEnds } from '../game/dates';
 import { getLevelInfo } from '../game/levels';
 import { getPlayerStats } from '../game/progress';
 import { blockedKey, withoutLocalOnly } from '../game/serverMissions';
+import type { StoreOffer } from '../game/store';
 import type { Answers, AvatarId, HistoryEntry } from '../game/types';
 import { localizeMissionView } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
-import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState, type PurchaseOutcome, type SubmitOutcome } from './GameShared';
+import { GameContext, useToasts, type GameContextValue, type GameMode, type PersistenceState, type PurchaseOutcome, type StoreStatus, type StoreView, type SubmitOutcome } from './GameShared';
 
 interface ProviderProps { children: ReactNode; switchMode: (mode: GameMode) => void }
 
@@ -124,6 +125,22 @@ export function ServerGameProvider({ children, switchMode }: ProviderProps) {
 
 type DraftChange = { missionId: string; stepIndex: number; answers: Answers };
 
+const STORE_EMOJI: Record<string, string> = { 'special-market-insight': '🔎', 'special-sales-strategy': '📈' };
+
+interface ServerStoreState { status: StoreStatus; offers: StoreOffer[]; purchased: string[] }
+
+/** Server offers onto the shape the existing Store screen already renders. Prices and ownership are the server's. */
+function toStoreState(data: api.ServerStore): ServerStoreState {
+  return {
+    status: 'available',
+    offers: data.offers.map((offer) => ({
+      id: offer.id, missionId: offer.mission_id, price: offer.price_coins, emoji: STORE_EMOJI[offer.id] ?? '🎁', demo: true as const,
+      title: offer.title, description: offer.description, missionTitle: offer.mission_title,
+    })),
+    purchased: data.offers.filter((offer) => offer.purchased).map((offer) => offer.id),
+  };
+}
+
 function ServerGameSession({ children, switchMode, initial, onChangeAccount, onSessionChanged, onSignedOut }: ProviderProps & {
   initial: api.GameBootstrap;
   onChangeAccount: () => void;
@@ -206,7 +223,7 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
 
   const applyProjection = useCallback((result: api.Projection) => {
     if (!active.current) return;
-    const next = { ...snapshotRef.current, progress: result.progress, missions: result.missions, date_key: result.date_key ?? snapshotRef.current.date_key };
+    const next = { ...snapshotRef.current, progress: result.progress, missions: result.missions, special_missions: result.special_missions ?? snapshotRef.current.special_missions, date_key: result.date_key ?? snapshotRef.current.date_key };
     snapshotRef.current = next;
     setSnapshot(next);
   }, []);
@@ -287,7 +304,7 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
 
   const startMission = useCallback(async (missionId: string): Promise<boolean> => {
     if (!await ensureCompatible()) return false;
-    const mission = snapshotRef.current.missions.find((item) => item.id === missionId);
+    const mission = snapshotRef.current.missions.find((item) => item.id === missionId) ?? snapshotRef.current.special_missions?.find((item) => item.id === missionId);
     if (!mission || mission.status === 'locked') { toast(t('play.locked'), 'warn'); return false; }
     if (mission.canStart === false) { toast(t(blockedKey(mission)), 'warn'); return false; }
     const stored = loadPendingCompletion(initial.player.id);
@@ -519,10 +536,64 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
     return cleared;
   }, [mayLeave, onSignedOut]);
   const missions = useMemo(() => snapshot.missions.map((mission) => localizeMissionView(mission, snapshot.progress, language, snapshot.missions)), [snapshot.missions, snapshot.progress, language]);
-  // The BFF has no integrated store contract yet: local purchases are device-only
-  // and must never be presented as server-confirmed or reused in this mode.
-  const store = useMemo(() => ({ status: 'server-unavailable' as const, offers: [] as const, purchased: [] as string[] }), []);
-  const buyOffer = useCallback(async (): Promise<PurchaseOutcome> => ({ ok: false, error: 'unavailable' }), []);
+  const specialMissions = useMemo(() => (snapshot.special_missions ?? []).filter((mission) => mission.status !== 'locked').map((mission) => localizeMissionView(mission, snapshot.progress, language)), [snapshot.special_missions, snapshot.progress, language]);
+
+  // Demo store (game coins only, no real payment): offers, prices, ownership and the balance all come from the BFF.
+  const [serverStore, setServerStore] = useState<ServerStoreState>({ status: 'loading', offers: [], purchased: [] });
+  const store = useMemo<StoreView>(() => serverStore, [serverStore]);
+  const loadStore = useCallback(async (): Promise<boolean> => {
+    try {
+      return await enqueue(async () => {
+        const data = await api.getStore();
+        if (!active.current) return false;
+        setServerStore(toStoreState(data));
+        return true;
+      });
+    } catch {
+      // Keep the last good store on a failed reload; only a store that never loaded is "unavailable".
+      if (active.current) setServerStore((previous) => previous.offers.length ? previous : { ...previous, status: 'server-unavailable' });
+      return false;
+    }
+  }, [enqueue]);
+  useEffect(() => { void loadStore(); }, [loadStore]);
+
+  // One Idempotency-Key per offer. It survives an ambiguous failure, so a retry can never charge twice,
+  // and is dropped once the server has definitively refused the request.
+  const purchaseKeys = useRef<Record<string, string>>({});
+  const buyOffer = useCallback(async (offerId: string): Promise<PurchaseOutcome> => {
+    let key = purchaseKeys.current[offerId];
+    if (!key) {
+      try { key = newCompletionKey(); } catch { return { ok: false, error: 'server_failed' }; }
+      purchaseKeys.current[offerId] = key;
+    }
+    try {
+      return await enqueue(async (): Promise<PurchaseOutcome> => {
+        requireCompatible();
+        await api.postPurchase(snapshotRef.current.csrf_token, offerId, key);
+        delete purchaseKeys.current[offerId];
+        // Never patch the balance locally: re-read it, the unlocked mission and ownership from the server.
+        try {
+          const fresh = await api.getBootstrap();
+          if (active.current) { if (fresh.player.id !== initial.player.id) onSessionChanged(fresh); else apply(fresh); }
+          const data = await api.getStore();
+          if (active.current) setServerStore(toStoreState(data));
+        } catch (error) {
+          markContractError(error);
+          if (active.current) setPersistence('error');
+        }
+        return { ok: true };
+      });
+    } catch (error) {
+      if (!(error instanceof api.GameApiError)) return { ok: false, error: 'server_failed' };
+      if (definitelyNotSubmitted(error)) delete purchaseKeys.current[offerId];
+      if (error.status === 401 || error.status === 403) setSessionChanged(true);
+      if (error.code === 'OFFER_ALREADY_PURCHASED' || error.code === 'INSUFFICIENT_GAME_COINS') { void refresh(); void loadStore(); }
+      if (error.code === 'OFFER_ALREADY_PURCHASED') return { ok: false, error: 'already_purchased' };
+      if (error.code === 'INSUFFICIENT_GAME_COINS') return { ok: false, error: 'insufficient_coins' };
+      if (error.code === 'STORE_OFFER_NOT_FOUND') return { ok: false, error: 'unknown_offer' };
+      return { ok: false, error: 'server_failed' };
+    }
+  }, [apply, enqueue, initial.player.id, loadStore, markContractError, onSessionChanged, refresh, requireCompatible]);
   const value = useMemo<GameContextValue>(() => ({
     mode: 'server', switchMode: safeSwitchMode, account: snapshot.player, changeAccount: safeChangeAccount, signOut,
     progress: snapshot.progress, todayKey: snapshot.date_key, serverClockOffset: clockOffset, missions,
@@ -531,8 +602,8 @@ function ServerGameSession({ children, switchMode, initial, onChangeAccount, onS
     achievements: snapshot.achievements_catalog.filter((item) => item.available !== false),
     level: getLevelInfo(snapshot.progress.xp, snapshot.game_config.levels), stats: getPlayerStats(snapshot.progress, snapshot.date_key),
     persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission,
-    resetProgress: () => {}, store, buyOffer, lastResult, refresh, loadHistory,
-  }), [safeSwitchMode, snapshot, safeChangeAccount, signOut, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, store, buyOffer, lastResult, refresh, loadHistory]);
+    resetProgress: () => {}, store, buyOffer, specialMissions, refreshStore: loadStore, lastResult, refresh, loadHistory,
+  }), [safeSwitchMode, snapshot, safeChangeAccount, signOut, clockOffset, missions, persistence, sessionChanged, contractError, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, store, buyOffer, specialMissions, loadStore, lastResult, refresh, loadHistory]);
 
   if (pending.status === 'loaded' || pending.status === 'corrupt') {
     const recover = async () => {

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { isStepAnswered, isStepRequired } from '../../game/missions';
-import { isSpecialMissionId } from '../../game/store';
 import type { Answers, AnswerValue, Mission, MissionDraft } from '../../game/types';
 import { keyboardDigit } from '../../i18n/locale';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -33,7 +32,7 @@ function moodFor(mission: Mission, index: number, answers: Answers): MascotMood 
 }
 
 export function MissionGameplay({ mission }: { mission: Mission }) {
-  const { progress, mode, categories, persistence, sessionChanged, contractError, saveDraft, flushDraft, discardDraft, finishMission, submitMission } = useGame();
+  const { progress, mode, categories, persistence, sessionChanged, contractError, saveDraft, flushDraft, discardDraft, finishMission, submitMission, specialMissions } = useGame();
   const { t, n } = useLanguage();
   const [answers, setAnswers] = useState<Answers>(() => progress.drafts[mission.id]?.answers ?? {});
   const [index, setIndex] = useState(() => resumeIndex(mission, progress.drafts[mission.id]));
@@ -80,13 +79,13 @@ export function MissionGameplay({ mission }: { mission: Mission }) {
       }).finally(() => { actionLock.current = false; setFinishing(false); });
       return;
     }
-    const special = isSpecialMissionId(mission.id);
+    const special = specialMissions.some((item) => item.id === mission.id);
     void finishMission(mission.id, answers).then((entry) => {
       // Purchased demo-store missions use their own result route because they are
       // outside the six-mission catalog that `/result` resolves against.
       if (entry) navigate(`${special ? '/result-special' : '/result'}/${entry.id}`, { replace: true });
     }).finally(() => { actionLock.current = false; setFinishing(false); });
-  }, [answers, canContinue, file, finishMission, index, isLast, mission.id, mission.source, saveDraft, submitMission]);
+  }, [answers, canContinue, file, finishMission, index, isLast, mission.id, mission.source, saveDraft, specialMissions, submitMission]);
 
   const goBack = useCallback(() => {
     if (index === 0 || actionLock.current) return;

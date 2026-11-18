@@ -308,11 +308,136 @@ try {
   assert.equal(rejected.latestSubmission.rejectionReason, 'پاسخ ناکافی');
   assert.equal((await bootstrap()).progress.xp, 100, 'a rejected submission adds no XP');
 
+  // ================= Demo store in server mode (game coins only) =================
+  // Earning mission: auto-approved, 0 organizational points, 50 coins, so only the game ledger moves.
+  const orgSum = () => Number(sql('SELECT COALESCE(SUM(points), 0) AS p FROM score_events')[0].p);
+  const goStore = async () => {
+    await page.evaluate(() => { window.location.hash = '#/store'; });
+    await page.locator('.offer-card').first().waitFor();
+  };
+  const storeApi = (path, init) => page.evaluate(async ({ path, init }) => {
+    const boot = await (await fetch('/api/v1/game/bootstrap')).json();
+    const response = await fetch(`/api/v1/game${path}`, { ...init, headers: { 'X-CSRF-Token': boot.csrf_token, 'X-Game-Api': '2', ...(init?.headers ?? {}) } });
+    return { status: response.status, body: await response.json() };
+  }, { path, init });
+  const walletText = () => page.locator('.store-wallet__balance b').innerText();
+  const purchases = () => sql('SELECT offer_id, price_coins FROM game_store_purchases');
+
+  assert.equal((await bootstrap()).progress.coins, 20, 'coins before the store: 20 from the approved mission');
+  await goStore();
+  assert.equal(await page.locator('.offer-card').count(), 2, 'both backend offers are listed');
+  const storeState = await storeApi('/store');
+  assert.deepEqual(storeState.body.offers.map((offer) => [offer.id, offer.price_coins, offer.purchased]), [['special-market-insight', 40, false], ['special-sales-strategy', 60, false]]);
+  assert.equal(storeState.body.currency, 'game_coins');
+  assert.equal(await walletText(), '۲۰');
+  assert.match(await page.locator('.offer-card').nth(0).innerText(), /۴۰/);
+  assert.match(await page.locator('.offer-card').nth(1).innerText(), /۶۰/);
+  assert.match(await page.locator('.store-badge').innerText(), /سروری/);
+
+  // Insufficient balance: 40 > 20. The server refuses; nothing is charged or recorded.
+  await page.locator('.offer-card').nth(0).locator('button.btn--sm').click();
+  await page.locator('.store-confirm .btn--yellow').click();
+  await page.getByText('سکهٔ نمایشی کافی برای این پیشنهاد نداری.').first().waitFor();
+  assert.deepEqual(purchases(), []);
+  assert.equal((await bootstrap()).progress.coins, 20);
+
+  const earnId = await create({ title: 'مأموریت سکه', points: '0', game_xp: '0', game_coins: '50', requires_evidence: '0', requires_review: '0', max_per_user: '1' });
+  const orgBeforeEarn = orgSum();
+  const earned = await page.evaluate(async (id) => {
+    const boot = await (await fetch('/api/v1/game/bootstrap')).json();
+    const body = new FormData();
+    body.set('answer', 'پاسخ برای دریافت سکه');
+    const response = await fetch(`/api/v1/game/missions/${id}/submissions`, { method: 'POST', headers: { 'X-CSRF-Token': boot.csrf_token, 'Idempotency-Key': 'earn-coins-1', 'X-Game-Api': '2' }, body });
+    return { status: response.status, mission: (await response.json()).mission };
+  }, earnId);
+  assert.equal(earned.status, 201);
+  assert.equal(earned.mission.status, 'approved');
+  assert.equal(orgSum(), orgBeforeEarn, 'the 0-point mission adds nothing to the organizational ledger');
+  await page.reload();
+  await page.locator('.offer-card').first().waitFor();
+  assert.equal(await walletText(), '۷۰', 'balance now 70 (20 + 50), read from the server');
+
+  // Successful purchase of Market Insight (40): confirmation, new balance, unlocked mission.
+  await page.locator('.offer-card').nth(0).locator('button.btn--yellow').click();
+  await page.locator('.store-confirm .btn--yellow').click();
+  await page.getByText('باز شد', { exact: false }).first().waitFor();
+  await page.locator('.store-specials__item').first().waitFor();
+  assert.equal(await walletText(), '۳۰');
+  assert.match(await page.locator('.store-specials__item').first().innerText(), /بینش بازار/);
+  assert.equal(await page.locator('.offer-card').nth(0).locator('button.btn--green').count(), 1, 'owned offer offers Play instead of Buy');
+  assert.deepEqual(purchases(), [{ offer_id: 'special-market-insight', price_coins: 40 }]);
+  assert.deepEqual(sql('SELECT amount, transaction_type FROM game_coin_transactions'), [{ amount: -40, transaction_type: 'store_purchase' }]);
+  assert.equal(orgSum(), orgBeforeEarn, 'a purchase never touches organizational points');
+  assert.equal((await bootstrap()).progress.coins, 30);
+
+  // Duplicate purchase: refused by the server, no second charge or record.
+  const duplicate = await storeApi('/store/purchases', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'dup-buy-1' }, body: JSON.stringify({ offer_id: 'special-market-insight' }) });
+  assert.equal(duplicate.status, 409);
+  assert.equal(duplicate.body.error.code, 'OFFER_ALREADY_PURCHASED');
+  assert.equal(purchases().length, 1);
+  assert.equal((await bootstrap()).progress.coins, 30);
+  // Replaying the original purchase request returns the stored receipt without charging again.
+  const keyedPurchase = sql('SELECT idempotency_key AS k FROM game_store_purchases')[0].k;
+  const replayedBuy = await storeApi('/store/purchases', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': keyedPurchase }, body: JSON.stringify({ offer_id: 'special-market-insight' }) });
+  assert.equal(replayedBuy.status, 200);
+  assert.equal(replayedBuy.body.replayed, true);
+  assert.equal((await bootstrap()).progress.coins, 30);
+
+  // Insufficient balance again: Sales Strategy costs 60 > 30.
+  await page.locator('.offer-card').nth(1).locator('button.btn--sm').click();
+  await page.locator('.store-confirm .btn--yellow').click();
+  await page.getByText('سکهٔ نمایشی کافی برای این پیشنهاد نداری.').first().waitFor();
+  assert.equal(purchases().length, 1);
+
+  // Persistence: reload, then clear the session and sign in again.
+  await page.reload();
+  await page.locator('.offer-card').first().waitFor();
+  assert.equal(await page.locator('.offer-card.is-owned').count(), 1);
+  assert.equal(await walletText(), '۳۰');
+  await context.clearCookies();
+  await page.reload();
+  await page.locator('.connection-gate select').waitFor();
+  await page.locator('.connection-gate select').selectOption(visitorId);
+  await page.locator('.connection-gate .btn--yellow').click();
+  await page.waitForFunction(() => !document.querySelector('.connection-gate'));
+  await goStore();
+  assert.equal(await page.locator('.offer-card.is-owned').count(), 1, 'purchase survives re-login');
+  assert.equal(await walletText(), '۳۰');
+  assert.equal(await page.locator('.store-specials__item').count(), 1);
+
+  // The purchased special mission is unlocked and playable; completing it pays its own configured rewards.
+  const beforeSpecial = await bootstrap();
+  const special = beforeSpecial.special_missions.find((item) => item.id === 'market-insight-special');
+  assert.ok(special && special.status === 'available', 'special mission unlocked by the purchase');
+  assert.equal(beforeSpecial.special_missions.find((item) => item.id === 'sales-strategy-special').status, 'locked');
+  assert.ok(special.xpReward > 0 && special.coinReward > 0);
+  const gameEventsBefore = sql('SELECT COUNT(*) AS n FROM game_reward_events')[0].n;
+  await page.locator('.offer-card').nth(0).locator('button.btn--green').click();
+  for (const step of special.steps) {
+    if (step.type === 'choice') {
+      const pick = step.options.findIndex((option) => !(option.flags ?? []).includes('order_received'));
+      await page.locator('.option').nth(pick).click();
+    } else if (step.type === 'rating') {
+      await page.locator('.rating__star').nth(2).click();
+    } else {
+      await page.locator('.note__input').waitFor();
+    }
+    await page.locator('.play__foot .btn--block').click();
+  }
+  await page.waitForFunction(() => window.location.hash.startsWith('#/result-special/'));
+  const afterSpecial = await bootstrap();
+  assert.equal(afterSpecial.progress.xp, beforeSpecial.progress.xp + special.xpReward, 'special mission pays its configured XP');
+  assert.equal(afterSpecial.progress.coins, beforeSpecial.progress.coins + special.coinReward, 'special mission pays its configured coins (store debit stays)');
+  assert.equal(afterSpecial.special_missions.find((item) => item.id === 'market-insight-special').status, 'completed');
+  assert.equal(purchases().length, 1);
+  assert.equal(sql('SELECT COUNT(*) AS n FROM game_reward_events')[0].n, gameEventsBefore, 'special missions use the catalog completion path, not the DB reward ledger');
+  assert.equal(orgSum(), orgBeforeEarn, 'organizational ledger untouched by the whole store flow');
+
   // Permissions stay intact: an operator session cannot use the visitor-only game API.
   const operatorGame = await fetch(`${apiBase}/api/v1/game/bootstrap`, { headers: { cookie: operator, 'X-Game-Api': '2' } });
   assert.equal(operatorGame.status, 403);
   assert.deepEqual(pageErrors, [], 'no uncaught browser errors');
-  console.log('Cross-repository mission scenario passed (create → publish → game → submit → review → rewards).');
+  console.log('Cross-repository scenarios passed (missions: create → publish → game → submit → review → rewards; store: buy, refuse, persist, unlock, play).');
 } catch (error) {
   failed = true;
   console.error(error);

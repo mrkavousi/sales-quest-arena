@@ -2,25 +2,29 @@ import { useEffect, useState } from 'react';
 import { MissionGameplay } from '../components/play/MissionGameplay';
 import { MissionResult } from '../components/play/MissionResult';
 import { Mascot } from '../components/art/Mascot';
-import { getMission } from '../game/missions';
 import { blockedKey } from '../game/serverMissions';
-import { getSpecialMissionViews } from '../game/store';
-import { localizeMissionView } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
 import { navigate } from '../router';
 import { useGame } from '../state/GameContext';
 
+/**
+ * Leave a result screen whose data never arrives. The router can switch routes one render before the refreshed
+ * game state lands, so a missing entry is given a moment to appear instead of redirecting immediately.
+ */
+function useResultGuard(ready: boolean): void {
+  useEffect(() => {
+    if (ready) return undefined;
+    const timer = window.setTimeout(() => navigate('/', { replace: true }), 2000);
+    return () => window.clearTimeout(timer);
+  }, [ready]);
+}
+
 /** Wait for the draft to be acknowledged before opening a server-backed run. */
 export function PlayPage({ missionId }: { missionId: string | null }) {
-  const { missions, progress, mode, startMission, toast } = useGame();
-  const { language, t } = useLanguage();
-  // Demo-store specials live on their own route and are only playable once bought.
-  const special = !getMission(missionId ?? '') && mode === 'local'
-    ? getSpecialMissionViews(progress)
-        .map((view) => localizeMissionView(view, progress, language))
-        .find((item) => item.id === missionId)
-    : undefined;
-  const mission = missions.find((item) => item.id === missionId) ?? special;
+  const { missions, specialMissions, startMission, toast } = useGame();
+  const { t } = useLanguage();
+  // Demo-store specials live on their own route and are only playable once bought (device or server).
+  const mission = missions.find((item) => item.id === missionId) ?? specialMissions.find((item) => item.id === missionId);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -94,16 +98,11 @@ export function SubmittedPage({ missionId }: { missionId: string | null }) {
 
 /** Result screen for a purchased demo-store mission, which is not in the main catalog. */
 export function SpecialResultPage({ entryId }: { entryId: string | null }) {
-  const { progress, mode, lastResult } = useGame();
-  const { language } = useLanguage();
+  const { progress, specialMissions, lastResult } = useGame();
   const entry = progress.history.find((item) => item.id === entryId) ?? (lastResult?.id === entryId ? lastResult : undefined);
-  const mission = entry && !getMission(entry.missionId) && mode === 'local'
-    ? getSpecialMissionViews(progress).map((view) => localizeMissionView(view, progress, language)).find((item) => item.id === entry.missionId)
-    : undefined;
+  const mission = entry ? specialMissions.find((item) => item.id === entry.missionId) : undefined;
 
-  useEffect(() => {
-    if (!entry || !mission) navigate('/', { replace: true });
-  }, [entry, mission]);
+  useResultGuard(Boolean(entry && mission));
 
   if (!entry || !mission) return null;
   return <MissionResult entry={entry} mission={mission} />;
@@ -115,9 +114,7 @@ export function ResultPage({ entryId }: { entryId: string | null }) {
   const entry = progress.history.find((item) => item.id === entryId) ?? (lastResult?.id === entryId ? lastResult : undefined);
   const mission = entry ? missions.find((item) => item.id === entry.missionId) : undefined;
 
-  useEffect(() => {
-    if (!entry || !mission) navigate('/', { replace: true });
-  }, [entry, mission]);
+  useResultGuard(Boolean(entry && mission));
 
   if (!entry || !mission) return null;
   return <MissionResult entry={entry} mission={mission} />;

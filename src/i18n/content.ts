@@ -324,6 +324,15 @@ export const PERSIAN_SPECIAL_MISSIONS: Record<string, MissionCopy> = {
   },
 };
 
+/**
+ * Server demo-store specials (API: GET /store). They are cloned by the backend from a catalog mission, so they
+ * reuse that mission's step copy. Kept apart from the device-only specials above.
+ */
+export const PERSIAN_SERVER_SPECIALS: Record<string, MissionCopy> = {
+  'market-insight-special': { ...PERSIAN_MISSIONS['market-scout'], title: 'بینش بازار: چالش ویژه', shortTitle: 'بینش بازار', description: 'فراتر از ویزیت معمول برو و یک یافتهٔ مهم از بازار ثبت کن.' },
+  'sales-strategy-special': { ...PERSIAN_MISSIONS['sales-summit'], title: 'راهبرد فروش: چالش ویژه', shortTitle: 'راهبرد فروش', description: 'از آخرین گفت‌وگوی مشتری‌ات یک برنامهٔ متمرکز بساز.' },
+};
+
 export const PERSIAN_DIFFICULTIES: Record<MissionDifficulty, string> = {
   easy: 'آسان', medium: 'متوسط', hard: 'سخت',
 };
@@ -369,7 +378,7 @@ function localizeStep(step: MissionStep, copy: StepCopy | undefined): MissionSte
 /** Return a display-only copy; IDs, flags, rewards and the stored game data remain unchanged. */
 export function localizeMission<T extends Mission>(mission: T, language: Language): T {
   // Special missions have their own Persian map so the six-mission coverage test stays exact.
-  const copy = language === 'fa' ? PERSIAN_MISSIONS[mission.id] ?? PERSIAN_SPECIAL_MISSIONS[mission.id] : undefined;
+  const copy = language === 'fa' ? PERSIAN_MISSIONS[mission.id] ?? PERSIAN_SPECIAL_MISSIONS[mission.id] ?? PERSIAN_SERVER_SPECIALS[mission.id] : undefined;
   if (!copy) return mission;
   return {
     ...mission,

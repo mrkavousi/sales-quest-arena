@@ -121,6 +121,10 @@ export interface StoreOffer {
   emoji: string;
   /** Never a real-money product: this is always demo currency. */
   demo: true;
+  /** Server mode only: texts from GET /store, used when no bundled translation exists. */
+  title?: string;
+  description?: string;
+  missionTitle?: string;
 }
 
 export const STORE_OFFERS: readonly StoreOffer[] = [

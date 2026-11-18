@@ -8,7 +8,7 @@ import { getLevelInfo } from '../game/levels';
 import { CATEGORIES, DIFFICULTY, getMission } from '../game/missions';
 import { createInitialProgress, ensureDaily, getLockReason, getMissionViews, getPlayerStats } from '../game/progress';
 import { clearProgress, isStorageAvailable, loadProgress, saveProgress, STORAGE_KEY } from '../game/storage';
-import { getPurchased, getUnlockedSpecialMissions, purchaseOffer, STORE_OFFERS, StoreError } from '../game/store';
+import { getPurchased, getUnlockedSpecialMissions, purchaseOffer, STORE_OFFERS, StoreError, getSpecialMissionViews } from '../game/store';
 import type { Answers, AvatarId, HistoryEntry, PlayerProgress } from '../game/types';
 import { localizeMissionView } from '../i18n/content';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -168,15 +168,17 @@ function LocalGameProvider({ children, switchMode }: { children: ReactNode; swit
   const missions = useMemo(() => getMissionViews(progress, todayKey).map((mission) => localizeMissionView(mission, progress, language)), [progress, todayKey, language]);
   const store = useMemo(() => ({ status: 'available' as const, offers: STORE_OFFERS, purchased: getPurchased(progress) }), [progress]);
   const refresh = useCallback(async () => true, []);
+  const specialMissions = useMemo(() => getSpecialMissionViews(progress).map((view) => localizeMissionView(view, progress, language)), [progress, language]);
+  const refreshStore = useCallback(async () => true, []);
   const loadHistory = useCallback(async () => ({ items: ref.current.history, next_cursor: null }), []);
   const value = useMemo<GameContextValue>(() => ({
     mode: 'local', switchMode, account: null, changeAccount: () => {}, signOut: async () => false, progress, todayKey, serverClockOffset: 0,
     missions, config: GAME_CONFIG, categories: CATEGORIES, difficulty: DIFFICULTY, achievements: ACHIEVEMENTS,
     level: getLevelInfo(progress.xp), stats: getPlayerStats(progress, todayKey), persistence, sessionChanged: false, contractError: null, toasts, toast,
     completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, resetProgress,
-    store, buyOffer,
+    store, buyOffer, specialMissions, refreshStore,
     lastResult: null, refresh, loadHistory,
-  }), [switchMode, progress, todayKey, missions, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, resetProgress, store, buyOffer, refresh, loadHistory]);
+  }), [switchMode, progress, todayKey, missions, persistence, toasts, toast, completeOnboarding, updatePlayer, startMission, saveDraft, flushDraft, discardDraft, finishMission, submitMission, resetProgress, store, buyOffer, specialMissions, refreshStore, refresh, loadHistory]);
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
