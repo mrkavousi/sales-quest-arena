@@ -144,6 +144,17 @@ cannot secure that backend endpoint.
   are labelled partial while more pages remain (or the history request failed);
   mission counts come from the server's mission records.
 
+## Hosted demo (Render backend + Vercel same-origin rewrite)
+
+`vercel.json` rewrites `/api/v1/game/*` to the Render-hosted backend
+(`https://kiloos-club-demo.onrender.com`, change it if the Render service gets another
+hostname) and sets `VITE_GAME_MODE=server` as the build-time default. Browser code
+still only calls relative same-origin paths; the cookie, `X-CSRF-Token` header and
+`Idempotent-Replay` header pass through the rewrite. The backend hosted environment is
+`KILOOS_ENV=demo`, where the JSON demo login is **visitor-only** and cookies are `Secure`.
+Demo account selection is still not authentication. The store and leaderboard in server
+mode are not connected yet (see "Data, offline behavior and retries").
+
 ## Deployment and security
 
 A static Vercel deployment using the checked-in `vercel.json` serves the device-only

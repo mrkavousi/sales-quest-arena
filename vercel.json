@@ -4,10 +4,21 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "build": { "env": { "VITE_GAME_MODE": "server" } },
+  "rewrites": [
+    {
+      "source": "/api/v1/game/:path*",
+      "destination": "https://kiloos-club-demo.onrender.com/api/v1/game/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/sw.js",
       "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/api/v1/game/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     }
   ]
 }
